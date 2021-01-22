@@ -2,12 +2,13 @@
 
 import {jst}                   from "jayesstee";
 import {Messaging}             from "./messaging.js";
-import Navigo                  from "navigo";
 import {Header}                from "./header.js";
+import Navigo                  from "navigo";
 
 // The main pages
 import {About}                 from "./about.js";
 import {Publisher}             from "./publisher.js";
+import {World}                 from "./world.js";
 //import {Body}                  from "./body";
 
 export class MainApp extends jst.Component {
@@ -57,6 +58,7 @@ export class MainApp extends jst.Component {
 
   initRouter() {
     let self = this;
+    this.router.on("/world",      () => {this.currPage = new World(this);      this.refresh()});
     this.router.on("/publisher",  () => {this.currPage = new Publisher(this);  this.refresh()});
     this.router.on("/subscriber", () => {this.currPage = new Subscriber(this); this.refresh()});
     this.router.on("/about",      () => {this.currPage = new About(this);      this.refresh()});

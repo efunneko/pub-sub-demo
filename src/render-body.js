@@ -24,7 +24,6 @@ export class RenderBody extends jst.Component {
   }
 
   cssInstance() {
-    console.log("refreshing", this.y)
     return {
       body$c: {
         display: 'table-cell',
@@ -35,7 +34,8 @@ export class RenderBody extends jst.Component {
         left$px: this.x,
         top$px: this.y,
         borderRadius$px: this.renderOpts.cornerRadius || 0,
-        backgroundColor: this.renderOpts.color || "lightblue"
+        backgroundColor: this.renderOpts.color || "lightblue",
+        zIndex: 1
       }
     };
   }
@@ -63,7 +63,6 @@ export class RenderBody extends jst.Component {
     if (body.position.x != body.positionPrev.x || body.position.y != body.positionPrev.y) {
       this.x = body.position.x - this.halfWidth;
       this.y = body.position.y - this.halfHeight;
-      console.log("new position", body.position.x, this.halfWidth, this.x)
       needsRefresh = true;
     }
 

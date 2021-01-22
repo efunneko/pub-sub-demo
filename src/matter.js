@@ -28,13 +28,13 @@ export class Matter extends jst.Component {
       matterDiv$c: {
         position: 'relative',
         display: 'inline-block',
-        width: '100%',
-        height: '100%',
+        //width: '100%',
+        //height: '100%',
       },
       matter$c: {
         display: 'inline-block',
-        width: '100%',
-        height: '100%'
+        //width: '100%',
+        //height: '100%'
       },
       addButton$c: {
         position: 'absolute',
@@ -101,11 +101,26 @@ export class Matter extends jst.Component {
   }
 
   addElements(list) {
+    let blocks = [];
     list.forEach(item => {
-      console.log('Adding:', item)
       let opts = item[4];
+      let renderOpts = {
+        x: item[0], 
+        y: item[1], 
+        width: item[2], 
+        height: item[3], 
+        angle: opts.rotate,
+        cornerRadius: opts.cornerRadius
+      };
+      if (opts.cornerRadius) {
+        opts.chamfer = {radius: opts.cornerRadius};
+        //delete(opts.cornerRadius);
+      }
       let box = Bodies.rectangle(item[0], item[1], item[2], item[3], opts);
-      this.renderBodies[box.id] = new RenderBody(box.id, {x: item[0], y: item[1], width: item[2], height: item[3], angle: opts.rotate});
+      if (!opts.noRender) {
+        this.renderBodies[box.id] = new RenderBody(box.id, renderOpts);
+      }
+      blocks.push(box);
       if (opts.velocity) {
         Body.setVelocity(box, opts.velocity);
       }
@@ -118,10 +133,11 @@ export class Matter extends jst.Component {
       World.add(this.engine.world, [box]);
     });
     this.refresh();
+    return blocks;
   }
 
   add(e) {
-    let box = Bodies.rectangle(650, 50, 80, 80, {friction: 0, frictionStatic:0, chamfer: {radius: 10}});
+    let box = Bodies.rectangle(750, 10, 80, 80, {friction: 0, frictionStatic:0, chamfer: {radius: 10}});
     this.renderBodies[box.id] = new RenderBody(box.id, {width: 80, height: 80, cornerRadius: 10, text: "Hi"});
     this.refresh();
     console.log("Created box", box.id)
@@ -137,6 +153,9 @@ export class Matter extends jst.Component {
     if (this.renderBodies[body.id]) {
       delete(this.renderBodies[body.id]);
       this.refresh();
+    }
+    if (this.collisionHandlers[body.id]) {
+      delete(this.collisionHandlers[body.id]);
     }
     World.remove(this.engine.world, body);
   }

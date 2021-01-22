@@ -1,22 +1,24 @@
-// publisher.js
+// world.js - represent the physics world
 
 import {jst}                   from "jayesstee";
 import {Matter}                from "./matter.js";
-import { Portal } from "./portal.js";
+import {Portal}                from "./portal.js";
+import {FixedBody}             from "./fixed-body.js";
 
-export class Publisher extends jst.Component {
+export class World extends jst.Component {
   constructor() {
     super();
 
     this.resize();
 
     this.matter = new Matter();
-    this.createMatterWorld();
 
     this.portal = new Portal(this, this.scale, this.offsetX, this.offsetY,
       {ringColor: "orange", x: 30, y: 7});
     this.portal2 = new Portal(this, this.scale, this.offsetX, this.offsetY,
       {ringColor: "lightblue", x: 20, y: 50, rotation: 50});
+    this.fixedBody = new FixedBody(this, this.scale, this.offsetX, this.offsetY,
+      {ringColor: "lightblue", x: 0, y: 10, width: 100, height: 10, rotation: 10}); 
 }
 
 
@@ -30,10 +32,17 @@ export class Publisher extends jst.Component {
   }
 
   render() {
-    return jst.$div({class: '-main'},
+    return jst.$div({class: '-main', 
+                     events: {
+                       pointermove: e => this.pointerMove(e), 
+                       pointerup:   e => this.pointerUp(e),
+                       pointerdown: e => this.pointerDown(e)
+                      }
+                    },
       this.matter,
       this.portal,
       this.portal2,
+      this.fixedBody
     );
   }
 
@@ -41,16 +50,6 @@ export class Publisher extends jst.Component {
     this.scale   = Math.min(window.innerWidth, window.innerHeight)/100;
     this.offsetX = (window.innerWidth  - 100 * this.scale)/2;
     this.offsetY = (window.innerHeight - 100 * this.scale)/2;
-    console.log("resizing:", window.innerWidth, window.innerHeight, this.scale)
-  }
-
-  createMatterWorld() {
-    this.matter.addElements([
-      this.adjust(15, 60, 5, 80).concat({isStatic: true, rotate: -Math.PI/6}),
-      this.adjust(85, 60, 5, 80).concat({isStatic: true, rotate: Math.PI/6}),
-      this.adjust(50, 110, 100, 5).concat({isStatic: true, events: {collision: (t, o) => this.hitGround(t, o)}}),
-    ]
-    );
   }
 
   add(x, y, w, h, opts) {
@@ -75,6 +74,38 @@ export class Publisher extends jst.Component {
   hitGround(targetBody, otherBody) {
     console.log("collision!", targetBody, otherBody);
     this.matter.remove(otherBody);
+  }
+
+  entitySelected(entity) {
+    if (this.selectedEntity) {
+      this.selectedEntity.unselect();
+    }
+
+    this.selectedEntity = entity;
+  }
+ 
+  pointerMove(e) {
+    e.preventDefault();
+    e.stopPropagation();
+    if (this.selectedEntity && this.selectedEntity.pointerMove) {
+      this.selectedEntity.pointerMove(e);
+    }
+  }
+
+  pointerUp(e) {
+    e.preventDefault();
+    e.stopPropagation();
+    if (this.selectedEntity && this.selectedEntity.pointerUp) {
+      this.selectedEntity.pointerUp(e);
+    }
+  }
+
+  pointerDown(e) {
+    e.preventDefault();
+    e.stopPropagation();
+    if (this.selectedEntity) {
+      this.selectedEntity.unselect();
+    }
   }
 
 }
