@@ -1,6 +1,6 @@
 // messaging.js
 
-import solace from 'solclientjs';
+var mqtt = require('mqtt')
 
 export class Messaging {
   constructor(opts) {
@@ -8,33 +8,167 @@ export class Messaging {
     this.vpn      = opts.vpn || "default";
     this.username = opts.username;
     this.password = opts.password;
-  }
+    this.clientId = opts.clientId;
 
-  initSolace() {
-    let properties = new solace.SolclientFactoryProperties();
-    properties.profile = solace.SolclientFactoryProfiles.version10;
-    solace.SolclientFactory.init(properties);
-    solace.SolclientFactory.setLogLevel(solace.LogLevel.TRACE);
+    this.subscriptions   = [];
+    this.subPrefixes     = [];
+    this.subExactMatches = [];
+    this.subWildcards    = [];
+
+    this.subRefCounts        = {};
+    this.subIdToSubscription = {};
+    this.subSeq              = 1;
+
   }
 
   connect() {
-    this.session = solace.SolclientFactory.createSession({
-      // solace.SessionProperties
-      url:      this.host,
-      vpnName:  this.vpn,
-      userName: this.username,
+    let opts = {
+      username: this.username,
       password: this.password,
-    });
-    // define session event listeners
-        /*...see section Session Events...*/
-    // define message event listener
-        /*...see section Receiving a message...*/
-    // connect the session
+      clientId: this.clientId,
+      clean: true
+    }
+
+    this.client  = mqtt.connect(this.host, opts)
+ 
+    this.client.on('connect', () => {
+      console.log("Connected!!", this.subscriptions)
+      if (this.subscriptions.length) {
+        this.subscriptions.forEach(sub => {
+          console.log("subscribing:", sub)
+          this.client.subscribe(sub.sub, {qos: sub.qos});
+        });
+      }
+    })
+     
+    this.client.on('message', (topic, msg) => this.rxMessage(topic, msg));
+  }
+
+  disconnect() {
+    this.client.end();
+  }
+
+  dispose() {
+    this.disconnect();
+  }
+
+  subscribe(qos, subscription, callback) {
+    console.log("subscribing to:", subscription, qos)
+    let subId = this.subSeq++;
+    this.subscriptions.push({sub: subscription, qos: qos, callback: callback, id: subId})
+    if (callback) {
+      this.learnSubscription(subscription, callback, subId);
+    }
+    if (this.client) {      
+      this.client.subscribe(subscription, {qos: qos});
+    }
+
+    this.subRefCounts[subId] = this.subRefCounts[subId] ? this.subRefCounts[subId]++ : 1;
+    this.subIdToSubscription[subId]   = [qos, subscription];
+
+    console.log("added sub", subscription)
+
+    return subId;
+  }
+
+  unsubscribe(subId) {
+    this.unlearnSubScription(subId);
+    console.log("rc", this.subRefCounts)
+    this.subRefCounts[subId]--;
+    if (!this.subRefCounts[subId]) {
+      delete(this.subRefCounts[subId]);
+      if (this.subIdToSubscription[subId]) {
+        this.client.unsubscribe(this.subIdToSubscription[subId][1]);
+        delete(this.subIdToSubscription[subId]);
+      }
+      else {
+        console.log("Tried to unsubscribe from subId:", subId)
+      }
+    }
+  }
+
+  publish(topic, msg, opts) {
+    this.client.publish(topic, JSON.stringify(msg), opts);
+  }
+
+  rxMessage(topic, msg) {
+    let data;
     try {
-        this.session.connect();
-    } catch (error) {
-        console.log(error.toString());
-    }    
+      data = JSON.parse(msg.toString());
+    }
+    catch(e) {
+      console.log("Failed to get JSON payload of message:", topic, msg.toString());
+      data = null;
+    }
+
+    let cbs = this.getMessageCallbacks(topic);
+
+    cbs.forEach(cb => cb(topic, msg, data));
+
+  }
+
+  getMessageCallbacks(topic) {
+    let cbs = [];
+    this.subPrefixes.forEach(item => {
+      if (topic.startsWith(item.prefix)) {
+        cbs.push(item.callback);
+      }
+    })
+    this.subExactMatches.forEach(item => {
+      if (topic == item.sub) {
+        cbs.push(item.callback);
+      }
+    })
+    if (this.subWildcards.length) {
+      let topicParts = topic.split("/");
+      this.subWildcards.forEach(item => {
+        let subParts = item.subParts;
+        let match = true;
+        for (let i = 0; i < subParts.length; i++) {
+          if (subParts[i] === "#") {
+            break;
+          }
+          if (topicParts[i] !== subParts[i] && subParts[i] !== "+") {
+            match = false;
+            break;
+          }
+        }
+        if (match) {
+          cbs.push(item.callback);
+        }
+      })
+    }
+    return cbs;
+  }
+
+  learnSubscription(subscription, callback, subId) {
+    if (subscription.match(/\+/)) {
+      this.subWildcards.push({
+        subParts: subscription.split("/"),
+        callback: callback,
+        id: subId
+      })
+    }
+    else if (subscription.endsWith("/#")) {
+      this.subPrefixes.push({
+        prefix: subscription.replace(/\/#$/, ""),
+        callback: callback,
+        id: subId
+      })
+    }
+    else {
+      this.subExactMatches.push({
+        sub: subscription,
+        callback: callback,
+        id: subId
+      })
+    }
+  }
+
+  unlearnSubScription(subId) {
+    this.subWildcards     = this.subWildcards.filter(s => s.id != subId);
+    this.subPrefixes      = this.subPrefixes.filter(s => s.id != subId);
+    this.subExactMatches  = this.subPrefixes.filter(s => s.id != subId);
   }
 
 }

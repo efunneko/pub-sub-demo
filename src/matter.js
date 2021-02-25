@@ -15,10 +15,13 @@ import {Engine,
 window.decomp = decomp;
 
 export class Matter extends jst.Component {
-  constructor() {
+  constructor(world, opts = {}) {
     super();
     this.collisionHandlers = {};
     this.renderBodies      = {};
+
+    this.events = opts.events || {};
+    this.world  = world;
 
     this.initEngine();
   }
@@ -36,13 +39,6 @@ export class Matter extends jst.Component {
         //width: '100%',
         //height: '100%'
       },
-      addButton$c: {
-        position: 'absolute',
-        top$pt: 10,
-        left$pt: 10,
-        padding$px: 5,
-        border$px: [1, "solid", "black"]
-      }
     }
   }
 
@@ -51,7 +47,6 @@ export class Matter extends jst.Component {
       jst.$div({cn: "-matter", ref: "div"},
         Object.values(this.renderBodies)
       ),
-      jst.$div({cn: "-addButton", events: {click: e => this.add(e)}}, "Add")
     );
   }
 
@@ -63,40 +58,12 @@ export class Matter extends jst.Component {
     var engine = Engine.create();
     this.engine = engine;
     Events.on(engine, "collisionStart", (e) => this.collision(e));
-    // create a renderer
-    // console.log(this.div.el, this.div.el.innerHeight)
-    /*
-    var render = Render.create({
-      element: this.div.el,
-      engine: engine,
-      options: {
-        height: this.div.el.offsetHeight,
-        width: this.div.el.offsetWidth,
-        wireframes: false,
-        background: "white"
-      }
-    });
-    */
 
-  // create two boxes and a ground
-  var boxA = Bodies.rectangle(650, 100, 80, 80, {
-  friction: 0,
-  render: {
-    fillStyle: 'red',
-    //strokeStyle: 'blue',
-    lineWidth: 0
-  }
-  });
-  this.renderBodies[boxA.id] = new RenderBody(boxA.id, {width: 80, height: 80});
-  // add all of the bodies to the world
-  World.add(engine.world, [boxA]);
+    // run the engine
+    //Engine.run(engine);
 
-  // run the engine
-  Engine.run(engine);
-
-  // run the renderer
-  // Render.run(render); - do our own custom rendering
-  requestAnimationFrame((time) => this.renderMatter(time));
+    // Start the renderer
+    requestAnimationFrame((time) => this.renderMatter(time));
 
   }
 
@@ -110,14 +77,18 @@ export class Matter extends jst.Component {
         width: item[2], 
         height: item[3], 
         angle: opts.rotate,
-        cornerRadius: opts.cornerRadius
+        cornerRadius: opts.cornerRadius,
+        id: opts.eventId
       };
       if (opts.cornerRadius) {
         opts.chamfer = {radius: opts.cornerRadius};
         //delete(opts.cornerRadius);
       }
       let box = Bodies.rectangle(item[0], item[1], item[2], item[3], opts);
-      if (!opts.noRender) {
+      if (opts.renderObj) {
+        this.renderBodies[box.id] = opts.renderObj;
+      }
+      else if (!opts.noRender) {
         this.renderBodies[box.id] = new RenderBody(box.id, renderOpts);
       }
       blocks.push(box);
@@ -140,7 +111,6 @@ export class Matter extends jst.Component {
     let box = Bodies.rectangle(750, 10, 80, 80, {friction: 0, frictionStatic:0, chamfer: {radius: 10}});
     this.renderBodies[box.id] = new RenderBody(box.id, {width: 80, height: 80, cornerRadius: 10, text: "Hi"});
     this.refresh();
-    console.log("Created box", box.id)
     Body.setVelocity( box, {x: Math.random(), y: 0});
     
 
@@ -161,16 +131,14 @@ export class Matter extends jst.Component {
   }
 
   collision(e) {
-    console.log("bodies:", Composite.allBodies(this.engine.world));
     e.pairs.forEach(pair => {
-      console.log("checking", pair, this.collisionHandlers);
       ['bodyA', 'bodyB'].forEach(body => {
         if (this.collisionHandlers[pair[body].id]) {
           if (body === 'bodyA') {
-            this.collisionHandlers[pair[body].id](pair[body], pair.bodyB);
+            this.collisionHandlers[pair[body].id](pair[body], pair.bodyB, this.renderBodies[pair.bodyB.id]);
           }
           else {
-            this.collisionHandlers[pair[body].id](pair[body], pair.bodyA);
+            this.collisionHandlers[pair[body].id](pair[body], pair.bodyA, this.renderBodies[pair.bodyA.id]);
           }
         }
       })
@@ -178,23 +146,48 @@ export class Matter extends jst.Component {
   }
 
   renderMatter(time) {
+    if (this.rendering) {
+      return;
+    }
+    this.rendering = true;
     //let t = (new Date()).getTime();
     let delta = time - this.lastTime || 16;
     //console.log("delta", t, delta)
-    if (delta > 100) {
+    delta = 16;
+    if (delta > 200) {
       delta = 16;
     }
-    Engine.update(this.engine, delta/2);
-    let bodies = Composite.allBodies(this.engine.world);
-    bodies.forEach(body => {
-      let renderBody = this.renderBodies[body.id];
-      if (renderBody) {
-        renderBody.update(body);
+    try {      
+      Engine.update(this.engine, delta);
+      let bodies = Composite.allBodies(this.engine.world);
+      bodies.forEach(body => {
+        let renderBody = this.renderBodies[body.id];
+        if (Math.abs(body.position.x) > 10000 || Math.abs(body.position.y) > 10000) {
+          if (renderBody && renderBody.isEvent) {
+            this.world.removeEvent(renderBody);
+          }
+          else {
+            this.world.remove(body);
+          }
+        }
+        else {
+          if (renderBody) {
+            renderBody.update(body);
+          }
+        }
+      });
+
+      if (this.events.tick) {
+        this.events.tick();
       }
-    });
+    }
+    catch(e) {
+      console.log("Error:", e)
+    }
 
     this.lastTime = time;
     window.requestAnimationFrame((time) => this.renderMatter(time));
+    this.rendering = false;
   }
 
 }

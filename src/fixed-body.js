@@ -3,6 +3,8 @@
 import {jst} from 'jayesstee';
 
 const START_WIDTH           = 10;
+const CORNER_SIZE           = 2;
+const KNOB_WIDTH            = 3;
 
 export class FixedBody extends jst.Component {
   constructor(world, scale, offsetX, offsetY, opts) {
@@ -19,8 +21,7 @@ export class FixedBody extends jst.Component {
     this.cx = this.x + this.width/2;
     this.cy = this.y + this.height/2;
 
-    this.rotation    = opts.rotation || 0;
-    this.rotationRad = this.rotation/180 * Math.PI;
+    this.rotationRad = opts.rotation || 0;
 
     this.showControls = false;
 
@@ -39,15 +40,17 @@ export class FixedBody extends jst.Component {
         height$px: this.height * this.scale,
         //boxShadow$px: [0, 0, 1 * this.scale, 2 * this.scale, this.ringColor],
         backgroundColor: '#888',
-        transform: jst.rotate(jst.deg(this.rotation))
+        transform: jst.rotate(jst.rad(this.rotationRad))
       },
       rotateKnob$c: {
-        top$px: this.height/2 * this.scale,
-        left$px: 0 * this.scale,
+        top$px: (this.height/2 - KNOB_WIDTH/2) * this.scale,
+        left$px: -KNOB_WIDTH * 2 * this.scale,
+        cursor: "move"
       },
       gripKnob$c: {
-        top$px: this.height/2 * this.scale,
-        left$px: this.width/2 * this.scale,
+        top$px: (this.height/2 - KNOB_WIDTH/2) * this.scale,
+        left$px: (this.width/2 - KNOB_WIDTH/2) * this.scale,
+        cursor: "move"
       },
     }
   }
@@ -55,8 +58,8 @@ export class FixedBody extends jst.Component {
   cssLocal() {
     return {
       body$c: {
-        position: 'absolute',
-        //zIndex: -1
+        position: 'fixed',
+        zIndex: 2
       },
       knob$c: {
         position: 'absolute',
@@ -68,17 +71,48 @@ export class FixedBody extends jst.Component {
       },
       knob$c$hover: {
         backgroundColor: "#ff8",
+      },
+      corner$c: {
+        position: 'absolute',
+        width$px: CORNER_SIZE * this.scale,
+        height$px: CORNER_SIZE * this.scale,
+        backgroundColor: 'white',
+        border$px: [1, 'solid', 'black']
+      },
+      corner$c$hover: {
+        backgroundColor: "#ff8",
         cursor: "pointer"
-      }
+      },
+      topLeft$c: {
+        top$px: -CORNER_SIZE/2 * this.scale,
+        left$px: -CORNER_SIZE/2 * this.scale
+      },
+      topRight$c: {
+        top$px: -CORNER_SIZE/2 * this.scale,
+        right$px: -CORNER_SIZE/2 * this.scale
+      },
+      botLeft$c: {
+        bottom$px: -CORNER_SIZE/2 * this.scale,
+        left$px: -CORNER_SIZE/2 * this.scale
+      },
+      botRight$c: {
+        bottom$px: -CORNER_SIZE/2 * this.scale,
+        right$px: -CORNER_SIZE/2 * this.scale
+      },
     }
   }
 
   render() {
-    return jst.$div({cn: '-body --body', events: {pointerdown: e => this.select(e)}},
+    console.log("rendering")
+    return jst.$div({cn: '-body --body', events: {click: e => this.select(e)}},
       jst.if(this.showControls) &&
       jst.$div({cn: '-controls --controls'},
         jst.$div({cn: '--rotateKnob -knob', events: {pointerdown: e => this.rotateDown(e)}}),
-        jst.$div({cn: '--gripKnob -knob', events: {pointerdown: e => this.gripDown(e)}})
+        jst.$div({cn: '--gripKnob -knob', events: {pointerdown: e => this.gripDown(e)}}),
+        jst.$div({cn: '-topLeft -corner',  events: {pointerdown: e => this.cornerDown(e, 0, 0)}}),
+        jst.$div({cn: '-topRight -corner', events: {pointerdown: e => this.cornerDown(e, 1, 0)}}),
+        jst.$div({cn: '-botLeft -corner',  events: {pointerdown: e => this.cornerDown(e, 0, 1)}}),
+        jst.$div({cn: '-botRight -corner', events: {pointerdown: e => this.cornerDown(e, 1, 1)}}),
       )
     );
   }
@@ -115,17 +149,15 @@ export class FixedBody extends jst.Component {
     return [rx + this.cx, ry + this.cy];
   }
 
-  rotate(deltaDeg) {
-    this.rotation    += deltaDeg;
-    this.rotationRad  = this.rotation/180 * Math.PI;
+  rotate(delta) {
+    this.rotationRad  = this.rotationRad + delta;
     this.matterBlocks.forEach(block => this.world.remove(block));
     this.addMatterBlock();   
     this.refresh();
   }
 
   rotateTo(angle, moveMatter) {
-    this.rotation     = angle;
-    this.rotationRad  = this.rotation/180 * Math.PI;
+    this.rotationRad  = angle;
     this.matterBlocks.forEach(block => this.world.remove(block));
     this.matterBlocks = [];
     if (moveMatter) {
@@ -137,6 +169,23 @@ export class FixedBody extends jst.Component {
   moveTo(x, y, moveMatter) {
     this.x = x;
     this.y = y;
+
+    this.cx = this.x + this.width/2;
+    this.cy = this.y + this.height/2;
+
+    this.matterBlocks.forEach(block => this.world.remove(block));
+    this.matterBlocks = [];
+    if (moveMatter) {
+      this.addMatterBlock();   
+    }
+    this.refresh();
+  }
+
+  sizeTo(x, y, width, height, moveMatter) {
+    this.x = x;
+    this.y = y;
+    this.width = width;
+    this.height = height;
 
     this.cx = this.x + this.width/2;
     this.cy = this.y + this.height/2;
@@ -162,6 +211,7 @@ export class FixedBody extends jst.Component {
   pointerUp(e) {
     if (this.controlUp) {
       this.controlUp(e)
+      this.world.save();
     }
   }
 
@@ -188,17 +238,79 @@ export class FixedBody extends jst.Component {
       ex: e.clientX,
       ey: e.clientY,
       x: this.x,
-      y: this.y
+      y: this.y,
     };
+  }
+
+  cornerUp(e) {
+    this.controlMove = null;
+    this.controlUp   = null;
+    this.cornerMove(e, true);
+  }
+
+  cornerMove(e, matterMove) {
+
+    let dx = (this.clickStart.ex - e.clientX)/this.scale;
+    let dy = (this.clickStart.ey - e.clientY)/this.scale;
+
+    // new position of my corner
+    let nmx = this.clickStart.mx - dx;
+    let nmy = this.clickStart.my - dy;
+
+    // get center of adjusted shape
+    let ncx = (nmx + this.clickStart.ox)/2;
+    let ncy = (nmy + this.clickStart.oy)/2;
+
+    // get the new height and width
+    let [rnmx, rnmy] = this.rotateCoords(nmx, nmy, true, [ncx, ncy]);
+    let nw  = Math.abs(ncx-rnmx) * 2;
+    let nh  = Math.abs(ncy-rnmy) * 2;
+
+    // and finally the appropriate x and y
+    let nx  = rnmx - this.clickStart.cornerX * nw;
+    let ny  = rnmy - this.clickStart.cornerY * nh;
+
+    console.log("new", nx, ny, nw, nh)
+    this.sizeTo(nx, ny, nw, nh, matterMove);
+  }
+
+  cornerDown(e, cornerX, cornerY) {
+    e.preventDefault();
+    e.stopPropagation();
+    this.controlMove = e => this.cornerMove(e);
+    this.controlUp   = e => this.cornerUp(e);
+
+    // Coords of this corner
+    let [mx, my] = this.rotateCoords(this.x + this.width*cornerX, this.y + this.height*cornerY);
+
+    // Get the coords of the opposite corner
+    let [ox, oy] = this.rotateCoords(this.x + this.width*(1-cornerX), this.y + this.height*(1-cornerY));
+
+    this.clickStart = {
+      ex: e.clientX,
+      ey: e.clientY,
+      x: this.x,
+      y: this.y,
+      mx: mx,
+      my: my,
+      ox: ox,
+      oy: oy,
+      width: this.width,
+      height: this.height,
+      cornerX: cornerX,
+      cornerY: cornerY,
+      center: [this.cx, this.cy]
+    };
+
   }
 
   rotateMove(e, final) {
     // Find the angle from the pointer location to the center point
     let dx = this.cx*this.scale+this.offsetX - e.clientX;
     let dy = this.cy*this.scale+this.offsetY - e.clientY;
-    let angle = Math.atan(dy/dx)/Math.PI*180;
+    let angle = Math.atan(dy/dx);
     if (dx < 0) {
-      angle += 180;
+      angle += Math.PI;
     }
     this.rotateTo(angle, final)
   }
@@ -228,5 +340,42 @@ export class FixedBody extends jst.Component {
     this.showControls = false;
     this.refresh();
   }
+
+  rotateCoords(x, y, reverse, center) {
+    let cx, cy;
+    if (center) {
+      cx = center[0];
+      cy = center[1];
+    }
+    else {
+      cx = this.cx;
+      cy = this.cy;
+    }
+
+    let ax = x - cx;
+    let ay = y - cy;
+
+    let dir = reverse ? -1 : 1;
+
+    let sr = Math.sin(dir * this.rotationRad);
+    let cr = Math.cos(dir * this.rotationRad);
+
+    let rx =  cr * ax - sr * ay;
+    let ry =  sr * ax + cr * ay;
+
+    return [rx + cx, ry + cy];
+  }
+
+  serialize() {
+    return {
+      type: 'fixed-body',
+      x: this.x,
+      y: this.y,
+      width: this.width,
+      height: this.height,
+      rotation: this.rotationRad
+     };
+  }
+
 
 }

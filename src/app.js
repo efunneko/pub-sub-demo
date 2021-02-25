@@ -16,10 +16,10 @@ export class MainApp extends jst.Component {
     super();
     this.router   = new Navigo();
     this.header   = new Header(this);
-    this.currPage = undefined;
+    this.currPage = new World(this);
 
-    this.initRouter();
-    this.router.resolve();
+    //this.initRouter();
+    //this.router.resolve();
   }
 
   cssGlobal() {
@@ -30,7 +30,8 @@ export class MainApp extends jst.Component {
       body: {
         padding$px: 0,
         margin$px: 0,
-        height: '100%'
+        height: '100%',
+        userSelect: 'none'
       }
     }
   }
@@ -59,8 +60,6 @@ export class MainApp extends jst.Component {
   initRouter() {
     let self = this;
     this.router.on("/world",      () => {this.currPage = new World(this);      this.refresh()});
-    this.router.on("/publisher",  () => {this.currPage = new Publisher(this);  this.refresh()});
-    this.router.on("/subscriber", () => {this.currPage = new Subscriber(this); this.refresh()});
     this.router.on("/about",      () => {this.currPage = new About(this);      this.refresh()});
   }
 
