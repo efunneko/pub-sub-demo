@@ -7,6 +7,8 @@ const PORTAL_SQUISH         = 3;
 const PORTAL_SQUISH2        = PORTAL_SQUISH * 2;
 const PORTAL_SQUISH_INNER   = PORTAL_SQUISH + 0.1;
 
+const MAX_VELOCITY          = 15;
+
 const colorToCode = {
   orange: 'orange',
   blue: 'lightblue',
@@ -406,7 +408,7 @@ export class Portal extends jst.Component {
   addSubscription(e) {
     e.stopPropagation();
     e.preventDefault();
-    let newSub = window.prompt("Enter new subscription:\nSchema: event/portal/{portal-color}/{event-shape}/{event-color}/{event-id}/{event-area}");
+    let newSub = window.prompt("Enter new subscription:\nSchema: event/portal/{portal-color}/{portal-id}/{event-shape}/{event-color}/{event-id}/{event-area}");
 
     if (!newSub) {
       return;
@@ -509,7 +511,7 @@ export class Portal extends jst.Component {
       return;
     }
 
-    let v = this.rotateCoords(-Math.min(8, data.velocity.x*this.scale), data.velocity.y*this.scale, [0,0]);
+    let v = this.rotateCoords(-Math.min(MAX_VELOCITY, data.velocity.x*this.scale), data.velocity.y*this.scale, [0,0]);
     let opts = {
       rotate: data.angle + this.rotationRad, 
       friction: data.friction, 
