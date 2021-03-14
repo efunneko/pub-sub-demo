@@ -122,6 +122,11 @@ export class FixedBody extends jst.Component {
     this.offsetX = offsetX;
     this.offsetY = offsetY;
   }
+  
+  remove() {
+    console.log("removing:", this.matterBlocks)
+    this.matterBlocks.forEach(block => this.world.remove(block));
+  }
 
   addMatterBlock() {
     this.matterBlocks = [];

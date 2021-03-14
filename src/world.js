@@ -206,9 +206,14 @@ export class World extends jst.Component {
     this.matter.remove(block);
   }
 
+  // Return true iff removed
   removeEntity(entity) {
     if (!entity.isDeleteActive ||
       entity.isDeleteActive()) {
+
+      if (entity.remove) {
+        entity.remove();
+      }
 
       let idx = this.objects.indexOf(entity);
         if (idx >= 0) {
@@ -216,13 +221,16 @@ export class World extends jst.Component {
       }
       this.refresh();
       this.save();
+      return true;
     }
+    return false;
   } 
 
   removeSelectedEntity() {
     if (this.selectedEntity) {
-      this.removeEntity(this.selectedEntity);
-      delete(this.selectedEntity);
+      if (this.removeEntity(this.selectedEntity)) {
+        delete(this.selectedEntity);
+      }
     }
   }
 
@@ -316,18 +324,7 @@ export class World extends jst.Component {
   keyDown(e) {
     if (this.selectedEntity && (e.key == 'Delete' || e.key == 'Backspace')) {
       // remove selected item
-
-      if (!this.selectedEntity.isDeleteActive ||
-          this.selectedEntity.isDeleteActive()) {
-
-        let idx = this.objects.indexOf(this.selectedEntity);
-        if (idx >= 0) {
-          this.objects.splice(idx, 1);
-          delete(this.selectedEntity);
-        }
-        this.refresh();
-        this.save();
-      } 
+      this.removeSelectedEntity();
     }
   }
 

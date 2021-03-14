@@ -273,6 +273,9 @@ export class Emitter extends jst.Component {
     this.refresh();
   }
 
+  remove() {
+    this.matterBlocks.forEach(block => this.world.remove(block));
+  }
 
   addMatterBlocks() {
     this.matterBlocks = [];
@@ -301,10 +304,11 @@ export class Emitter extends jst.Component {
     this.eventSeq++;
     let color = this.color;
     if (color == 'random') {
-      color = "green";
-      if (this.eventSeq.toString().match(/^(10|11|16|23|27|39)$/)) {
-        color = "orange";
-      }
+      color = (['red', 'blue', 'orange', 'green'])[Math.floor(Math.random()*4)];
+      // color = "green";
+      // if (this.eventSeq.toString().match(/^(10|11|16|23|27|39)$/)) {
+      //   color = "orange";
+      // }
     }
     let opts = {
       rotate: this.rotationRad, 

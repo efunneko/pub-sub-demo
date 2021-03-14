@@ -361,6 +361,10 @@ export class Portal extends jst.Component {
     this.offsetY = offsetY;
   }
 
+  remove() {
+    this.matterBlocks.forEach(block => this.world.remove(block));
+  }
+
   addMatterBlocks() {
     let opts = {
       isStatic: true, 
@@ -776,14 +780,17 @@ export class Portal extends jst.Component {
     if (this.showControls && this.portalIdInput && this.portalIdInput.el) {
       let id   = this.portalIdInput.el.value;
       let name = this.portalNameInput.el.value;
+      console.log("changing id");
       this.changeId(id);
+      console.log("changing name");
       this.changeName(name);
     }
 
-
+    console.log("changing bools");
     this.showControls = false;
     this.showSettings = false;
     this.deleteActive = true;
+    console.log("showsettings:", this.showSettings);
     this.refresh();
   }
 
