@@ -58,7 +58,7 @@ export class Emitter extends jst.Component {
         backgroundColor: this.ringColor,
       },
       panel$c: {
-        backgroundColor: EventColors[this.color],
+        background: this.color == 'random' ? 'linear-gradient(117deg, rgba(200,0,0,1) 0%, rgba(215,181,116,1) 19%, rgba(224,226,158,1) 39%, rgba(132,208,130,1) 55%, rgba(74,161,151,1) 75%, rgba(1,0,200,1) 100%)' : EventColors[this.color],
       }
     }
   }
@@ -182,6 +182,11 @@ export class Emitter extends jst.Component {
         height$px: EMITTER_HEIGHT*0.1 * this.scale,
         opacity: 0.6,
       },
+      randButton$c: {
+        display: 'inline-block',
+        //background: 'rgb(200,0,0)';
+        background: 'linear-gradient(117deg, rgba(200,0,0,1) 0%, rgba(215,181,116,1) 19%, rgba(224,226,158,1) 39%, rgba(132,208,130,1) 55%, rgba(74,161,151,1) 75%, rgba(1,0,200,1) 100%)'
+      },
       colorButton$c$hover: {
         opacity: 1
       },
@@ -223,11 +228,8 @@ export class Emitter extends jst.Component {
            jst.$div({cn: '-buttonGroup'},
              Object.keys(EventColors).map(col => jst.$div({cn: `-colorButton ${col == this.color ? '-selected' : ''}`, style: `background-color: ${EventColors[col]}`, events: {click: e => this.setColor(col)}})),
            ),
-           jst.$div({cn: '-buttonGroup'},
-             jst.$div({cn: '-colorButton -red',    events: {click: e => this.fire(e)}}),
-             jst.$div({cn: '-colorButton -green',  events: {click: e => this.fire(e)}}),
-             jst.$div({cn: '-colorButton -blue',   events: {click: e => this.fire(e)}}),
-             jst.$div({cn: '-colorButton -orange', events: {click: e => this.fire(e)}}),
+           jst.$div({cn: '-buttonGroup -randButton',    events: {click: e => this.setColor('random')}},
+             jst.$div({cn: '-randButton',    events: {click: e => this.setColor('random')}}),
            ),
           ),
           jst.$div({cn: '-rangeSelect'},
@@ -297,13 +299,20 @@ export class Emitter extends jst.Component {
     }
     let v = this.rotateCoords(2 * this.speed, 0, false, [0,0]);
     this.eventSeq++;
+    let color = this.color;
+    if (color == 'random') {
+      color = "green";
+      if (this.eventSeq.toString().match(/^(10|11|16|23|27|39)$/)) {
+        color = "orange";
+      }
+    }
     let opts = {
       rotate: this.rotationRad, 
       friction: 0, 
       text: this.eventSeq,
       eventId: this.eventSeq,
       velocity: {x: v[0], y: v[1]},
-      color: this.color,
+      color: color,
       guid: (100000000*Math.random()).toFixed(0) + '-' + (100000000*Math.random()).toFixed(0)
     };
     let size = this.eventWidth/2 + this.eventWidth * this.size/20;

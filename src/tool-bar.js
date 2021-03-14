@@ -44,10 +44,12 @@ export class ToolBar extends jst.Component {
   render() {
     return jst.$div({cn: '-toolBar'},
       jst.$div({cn: '-buttonBar'},
+        jst.$div({cn: '-button', events: {click: e => this.start()}}, "Start"),
         jst.$div({cn: '-button', events: {click: e => this.click('emitter')}}, "Event Emitter"),
-        jst.$div({cn: '-button', events: {click: e => this.click('portal')}}, "Event Portal"),
+        jst.$div({cn: '-button', events: {click: e => this.click('portal')}}, "Portal"),
         jst.$div({cn: '-button', events: {click: e => this.click('fixed-body')}}, "Rectangle"),
-        jst.$div({cn: '-button', events: {click: e => this.click('text')}}, "Text Block"),
+        jst.$div({cn: '-button', events: {click: e => this.click('remove-events')}}, "Remove All Events"),
+        jst.$div({cn: '-button', events: {click: e => this.removeSelected()}}, "Remove Selected"),
       )
     )
   }
@@ -58,7 +60,20 @@ export class ToolBar extends jst.Component {
   }
 
   click(type) {
-    this.world.addItem(type)
+    if (type == "remove-events") {
+      this.world.removeAllEvents();
+    }
+    else {
+      this.world.addItem(type)
+    }
+  }
+
+  removeSelected() {
+    this.world.removeSelectedEntity();
+  }
+
+  start() { 
+    this.world.getAccel()
   }
 
 }

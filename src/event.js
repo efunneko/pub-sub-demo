@@ -35,6 +35,7 @@ export class Event extends jst.Component {
     this.id           = opts.eventId;
     this.guid         = opts.guid;
     this.cornerRadius = opts.cornerRadius;
+    this.topic        = opts.topic;
 
     this.isEvent  = true;
     this.type     = "square";      
@@ -75,7 +76,10 @@ export class Event extends jst.Component {
   }
 
   render() {
-    return this.display && jst.$div({cn: '-body --body', style: `left: ${this.x}px; top: ${this.y}px; transform: rotate(${this.angle}rad)`}, this.text);
+    return this.display && 
+      jst.$div({cn: '-body --body', 
+                events: {click: () => this.showTopic()},
+                style: `left: ${this.x}px; top: ${this.y}px; transform: rotate(${this.angle}rad)`}, this.text);
   }
 
   resize(scale, offsetX, offsetY) {
@@ -112,8 +116,12 @@ export class Event extends jst.Component {
     }
     this.world.removeEvent(this)
 
-    let topic = topicPrefix + `${this.type}/${this.color}/${this.id.toString().padStart(5, "0")}/${Math.ceil(this.body.area).toString().padStart(6, "0")}`;
-    messaging.publish(topic, msg, {qos: 1});
+    this.lastTopic = topicPrefix + `${this.type}/${this.color}/${this.id.toString().padStart(5, "0")}/${Math.ceil(this.body.area).toString().padStart(6, "0")}`;
+    messaging.publish(this.lastTopic, msg, {qos: 1});
+  }
+
+  showTopic() {
+    alert(`Topic: ${this.topic}`)
   }
 
   addMatterBlock() {

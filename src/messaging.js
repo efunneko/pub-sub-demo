@@ -26,7 +26,7 @@ export class Messaging {
       username: this.username,
       password: this.password,
       clientId: this.clientId,
-      clean: true
+      clean: false
     }
 
     this.client  = mqtt.connect(this.host, opts)
@@ -45,10 +45,12 @@ export class Messaging {
   }
 
   disconnect() {
+    console.log("Disconnect")
     this.client.end();
   }
 
   dispose() {
+    console.log("Dispose")
     this.disconnect();
   }
 
@@ -73,7 +75,6 @@ export class Messaging {
 
   unsubscribe(subId) {
     this.unlearnSubScription(subId);
-    console.log("rc", this.subRefCounts)
     this.subRefCounts[subId]--;
     if (!this.subRefCounts[subId]) {
       delete(this.subRefCounts[subId]);

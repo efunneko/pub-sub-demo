@@ -79,6 +79,11 @@ export class World extends jst.Component {
         position: 'relative',
         height: '100%',
         width:  '100%',
+      },
+      status$c: {
+        position: 'fixed',
+        right$px: 50,
+        top$px: 20
       }
     };
   }
@@ -163,6 +168,7 @@ export class World extends jst.Component {
     let matterOpts = Object.assign({renderObj: event}, opts);
 
     this.events[opts.guid] = event;
+    opts.restitution = 0.01;
 
     return (this.matter.addElements([
       this.adjust(x, y, w, h).concat(matterOpts),
@@ -177,6 +183,21 @@ export class World extends jst.Component {
     delete(this.events[event.guid]);
   }
 
+  removeAllEvents() {
+    console.log("Removing all events")
+    Object.values(this.events).forEach(event => this.removeEvent(event));
+
+    // Also clear out all the queued events in the portals
+    this.objects.forEach(obj => {
+      console.log("Checking", obj)
+      if (obj.type == "portal") {
+        console.log("clearing event queue")
+        obj.clearEventQueue();
+      }
+    });
+
+  }
+
   getEvent(eventGuid) {
     return this.events[eventGuid];
   }
@@ -185,6 +206,25 @@ export class World extends jst.Component {
     this.matter.remove(block);
   }
 
+  removeEntity(entity) {
+    if (!entity.isDeleteActive ||
+      entity.isDeleteActive()) {
+
+      let idx = this.objects.indexOf(entity);
+        if (idx >= 0) {
+        this.objects.splice(idx, 1);
+      }
+      this.refresh();
+      this.save();
+    }
+  } 
+
+  removeSelectedEntity() {
+    if (this.selectedEntity) {
+      this.removeEntity(this.selectedEntity);
+      delete(this.selectedEntity);
+    }
+  }
 
   hitGround(targetBody, otherBody) {
     console.log("collision!", targetBody, otherBody);
@@ -312,5 +352,27 @@ export class World extends jst.Component {
     ];
   }
 
+  getAccel(){
+    if (!DeviceMotionEvent || !DeviceMotionEvent.requestPermission) {
+      return;
+    }
+    DeviceMotionEvent.requestPermission().then(response => {
+
+      this.refresh();
+          if (response == 'granted') {
+       // Add a listener to get smartphone orientation 
+           // in the alpha-beta-gamma axes (units in degrees)
+            window.addEventListener('devicemotion',(event) => {
+                // Expose each orientation angle in a more readable way
+                let gy = event.accelerationIncludingGravity.y / -9.8;
+                let gx = event.accelerationIncludingGravity.x / 9.8;
+                
+                this.matter.engine.world.gravity.x = gx;
+                this.matter.engine.world.gravity.y = gy;
+                
+            });
+        }
+    });
+}
 
 }

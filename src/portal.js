@@ -8,6 +8,7 @@ const PORTAL_SQUISH2        = PORTAL_SQUISH * 2;
 const PORTAL_SQUISH_INNER   = PORTAL_SQUISH + 0.1;
 
 const MAX_VELOCITY          = 15;
+const MIN_EVENT_GAP         = 50;
 
 const colorToCode = {
   orange: 'orange',
@@ -19,6 +20,8 @@ export class Portal extends jst.Component {
   constructor(world, scale, offsetX, offsetY, opts) {
     super();
 
+    this.type = "portal";
+    
     this.world = world;
 
     this.id = opts.id || 1;
@@ -55,7 +58,13 @@ export class Portal extends jst.Component {
 
     this.connectToBroker();
 
-    this.addStandardSubscriptions();
+    if (!opts.subscriptions) {
+      this.addStandardSubscriptions();
+    }
+    else {
+      opts.subscriptions.forEach(sub => this.addMessagingSubscription(sub));
+    }
+
 
   }
 
@@ -485,18 +494,18 @@ export class Portal extends jst.Component {
   }
 
   rxMessage(topic, msg, data) {
-    console.log("received", data)
+    data.topic = topic;
     if (this.queuedEvents.length) {
       this.queuedEvents.push(data);
       return;
     }
 
     let time  = (new Date()).getTime();
-    let delta = this.lastSpawnTime - time;
-    if (delta < 20) {
+    let delta = time - this.lastSpawnTime;
+    if (delta < MIN_EVENT_GAP) {
       this.queuedEvents.push(data);
       if (!this.eventQueueTimer) {
-        this.eventQueueTimer = setTimeout(() => this.serviceEventQueue(), 20);
+        this.eventQueueTimer = setTimeout(() => this.serviceEventQueue(), MIN_EVENT_GAP);
       }
       return;
     }
@@ -505,15 +514,15 @@ export class Portal extends jst.Component {
   }
 
   spawnEvent(data) {
-    console.log("Here", data)
     if (this.world.getEvent(data.guid)) {
       // Only allow one instance of an event
       return;
     }
 
+    this.lastSpawnTime  = (new Date()).getTime();
     let v = this.rotateCoords(-Math.min(MAX_VELOCITY, data.velocity.x*this.scale), data.velocity.y*this.scale, [0,0]);
     let opts = {
-      rotate: data.angle + this.rotationRad, 
+      rotate: data.angle + this.rotationRad - Math.PI, 
       friction: data.friction, 
       frictionStatic: data.frictionStatic,
       angularVelocity: data.angularVelocity,
@@ -521,7 +530,8 @@ export class Portal extends jst.Component {
       eventId: data.id,
       velocity: {x: v[0], y: v[1]},
       color: data.color,
-      guid: data.guid
+      guid: data.guid,
+      topic: data.topic
     };
     let size = data.width;
     this.world.addEvent(...this.rotateCoords(this.x + PORTAL_WIDTH*0.1, this.y+PORTAL_WIDTH*0.5), size, size, opts);
@@ -534,11 +544,15 @@ export class Portal extends jst.Component {
       this.spawnEvent(event);
     }
     if (this.queuedEvents.length) {
-      this.eventQueueTimer = setTimeout(() => this.serviceEventQueue(), 20);
+      this.eventQueueTimer = setTimeout(() => this.serviceEventQueue(), MIN_EVENT_GAP);
     }
     else {
       this.eventQueueTimer = null;
     }
+  }
+
+  clearEventQueue() {
+    this.queuedEvents = [];
   }
 
   /*
@@ -781,7 +795,7 @@ export class Portal extends jst.Component {
       rotation: this.rotationRad,
       color: this.color,
       id: this.id,
-      subscriptions: this.subscriptions,
+      subscriptions: Object.keys(this.subIds),
       name: this.name,
       clientId: this.clientId
      };
