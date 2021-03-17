@@ -20,6 +20,7 @@ export class World extends jst.Component {
     this.timeoutSeq = 0;
     this.timeouts   = {};
     this.debugClientIds = {};
+    this.status = "hi";
 
     let state = this.load();
     if (state) {
@@ -99,7 +100,8 @@ export class World extends jst.Component {
                     },
       this.toolBar,
       this.matter,
-      this.objects
+      this.objects,
+      jst.$div({cn: '-status'}, this.status)
     );
   }
 
@@ -350,11 +352,13 @@ export class World extends jst.Component {
   }
 
   getAccel(){
+    this.status = "getAccel";
+    this.refresh();
     if (!DeviceMotionEvent || !DeviceMotionEvent.requestPermission) {
       return;
     }
     DeviceMotionEvent.requestPermission().then(response => {
-
+      this.status = "getting perm " + response;
       this.refresh();
           if (response == 'granted') {
        // Add a listener to get smartphone orientation 
