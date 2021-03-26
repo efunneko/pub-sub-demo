@@ -15,30 +15,30 @@ export class World extends jst.Component {
 
     this.resize();
 
-    this.app        = app;
-    this.animTicks  = 0;
-    this.timeoutSeq = 0;
-    this.timeouts   = {};
-    this.debugClientIds = {};
-    this.status = "hi";
+    this.app            = app;
+    this.animTicks      = 0;
+    this.timeoutSeq     = 0;
+    this.timeouts       = {};
 
     let state = this.load();
     if (state) {
-      console.log("state", state, state.messagingOpts)
       this.messagingOpts = state.messagingOpts;      
     }
     else {
       this.messagingOpts = {
-        host: 'wss://mr1js1tiv10w2t.messaging.solace.cloud:8443',
-        username: 'solace-cloud-client',
-        password: 'md4ra1vj5afebgomknb15rl8t'
+        host: 'ws://192.168.134.44:8000',
+        username: 'default',
+        password: 'default'
       };
     }
-
-    //this.messaging = new Messaging(this.messagingOpts);
+    this.messagingOpts = {
+      host: 'ws://192.168.134.44:8000',
+      username: 'default',
+      password: 'default'
+    };
 
     this.toolBar = new ToolBar(this, this.scale);
-    this.matter = new Matter(this, {events: {tick: () => this.animationTick()}});
+    this.matter  = new Matter(this, {events: {tick: () => this.animationTick()}});
 
     this.objects = [];
 
@@ -67,8 +67,6 @@ export class World extends jst.Component {
     }
     this.events = {};
 
-    //this.messaging.connect();
-
     document.addEventListener("keydown", e => this.keyDown(e));
 
   }
@@ -80,11 +78,6 @@ export class World extends jst.Component {
         position: 'relative',
         height: '100%',
         width:  '100%',
-      },
-      status$c: {
-        position: 'fixed',
-        right$px: 50,
-        top$px: 20
       }
     };
   }
@@ -94,14 +87,13 @@ export class World extends jst.Component {
                      events: {
                        pointermove: e => this.pointerMove(e), 
                        pointerup:   e => this.pointerUp(e),
-                       click: e => this.pointerDown(e),
-                       keydown: e => this.keyDown(e)
+                       click:       e => this.pointerDown(e),
+                       keydown:     e => this.keyDown(e)
                       }
                     },
       this.toolBar,
       this.matter,
-      this.objects,
-      jst.$div({cn: '-status'}, this.status)
+      this.objects
     );
   }
 
@@ -113,28 +105,10 @@ export class World extends jst.Component {
   }
 
   createConnection(opts) {
-    console.log("Connecting:", opts.clientId, this.debugClientIds)
-    if (this.debugClientIds[opts.clientId]) {
-      console.error("Dup client ID");
-    }
-    this.debugClientIds[opts.clientId] = true;
-
     let combinedOpts = Object.assign(this.messagingOpts, opts);
-    let messaging = new Messaging(combinedOpts);
+    let messaging    = new Messaging(combinedOpts);
     messaging.connect();
     return messaging;
-  }
-
-  publish(topic, msg, opts) {
-    this.messaging.publish(topic, msg, opts);
-  }
-
-  subscribe(qos, subscription, callback) {
-    return this.messaging.subscribe(qos, subscription, callback);
-  }
-
-  unsubscribe(subId) {
-    return this.messaging.unsubscribe(subId);
   }
 
   addItem(type) {
@@ -160,13 +134,13 @@ export class World extends jst.Component {
   }
 
   addEvent(x, y, w, h, opts) {
-    console.log("trying to add event", opts)
     if (this.events[opts.guid]) {
       // Don't allow dups
       return;
     }
+
     opts.cornerRadius = 5;
-    let event = new Event(this, this.scale, this.offsetY, this.offsetY, Object.assign({x: x, y: y, width: w, height: h}, opts));
+    let event      = new Event(this, this.scale, this.offsetY, this.offsetY, Object.assign({x: x, y: y, width: w, height: h}, opts));
     let matterOpts = Object.assign({renderObj: event}, opts);
 
     this.events[opts.guid] = event;
@@ -186,14 +160,11 @@ export class World extends jst.Component {
   }
 
   removeAllEvents() {
-    console.log("Removing all events")
     Object.values(this.events).forEach(event => this.removeEvent(event));
 
     // Also clear out all the queued events in the portals
     this.objects.forEach(obj => {
-      console.log("Checking", obj)
       if (obj.type == "portal") {
-        console.log("clearing event queue")
         obj.clearEventQueue();
       }
     });
@@ -237,7 +208,6 @@ export class World extends jst.Component {
   }
 
   hitGround(targetBody, otherBody) {
-    console.log("collision!", targetBody, otherBody);
     this.matter.remove(otherBody);
   }
 
@@ -250,7 +220,6 @@ export class World extends jst.Component {
   }
  
   setAnimTimeout(func, ticks) {
-    console.log("Setting a timer")
     this.timeoutSeq++;
     this.timeouts[this.timeoutSeq] = {
       id: this.timeoutSeq,
@@ -341,7 +310,6 @@ export class World extends jst.Component {
   }
 
   // Basic Utils
-
   adjust(...items) {
     return [
       items[0] * this.scale + this.offsetX,
@@ -351,29 +319,27 @@ export class World extends jst.Component {
     ];
   }
 
+  // For the accelerometer on mobile devices
   getAccel(){
-    this.status = "getAccel";
-    this.refresh();
     if (!DeviceMotionEvent || !DeviceMotionEvent.requestPermission) {
       return;
     }
     DeviceMotionEvent.requestPermission().then(response => {
-      this.status = "getting perm " + response;
       this.refresh();
-          if (response == 'granted') {
-       // Add a listener to get smartphone orientation 
-           // in the alpha-beta-gamma axes (units in degrees)
-            window.addEventListener('devicemotion',(event) => {
-                // Expose each orientation angle in a more readable way
-                let gy = event.accelerationIncludingGravity.y / -9.8;
-                let gx = event.accelerationIncludingGravity.x / 9.8;
+      if (response == 'granted') {
+        // Add a listener to get smartphone orientation 
+        // in the alpha-beta-gamma axes (units in degrees)
+        window.addEventListener('devicemotion',(event) => {
+          // Expose each orientation angle in a more readable way
+          let gy = event.accelerationIncludingGravity.y / -9.8;
+          let gx = event.accelerationIncludingGravity.x / 9.8;
                 
-                this.matter.engine.world.gravity.x = gx;
-                this.matter.engine.world.gravity.y = gy;
+          this.matter.engine.world.gravity.x = gx;
+          this.matter.engine.world.gravity.y = gy;
                 
-            });
-        }
+        });
+      }
     });
-}
+  }
 
 }

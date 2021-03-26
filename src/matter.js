@@ -2,14 +2,11 @@
 
 import decomp         from 'poly-decomp';
 import {jst}          from 'jayesstee';
-import {RenderBody}   from './render-body';
 import {Engine, 
         World, 
         Body, 
         Bodies, 
         Composite, 
-        Constraint, 
-        Render, 
         Events }      from 'matter-js';
 
 window.decomp = decomp;
@@ -87,9 +84,6 @@ export class Matter extends jst.Component {
       let box = Bodies.rectangle(item[0], item[1], item[2], item[3], opts);
       if (opts.renderObj) {
         this.renderBodies[box.id] = opts.renderObj;
-      }
-      else if (!opts.noRender) {
-        this.renderBodies[box.id] = new RenderBody(box.id, renderOpts);
       }
       blocks.push(box);
       if (opts.velocity) {

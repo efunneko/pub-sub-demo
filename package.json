@@ -7,7 +7,6 @@
     "jayesstee": "^0.11.5",
     "matter-js": "^0.15.0",
     "mqtt": "^4.2.6",
-    "navigo": "^8.3.2",
     "poly-decomp": "^0.3.0",
     "solclientjs": "^10.5.1"
   },
@@ -33,7 +32,9 @@
   "keywords": [
     "pub",
     "sub",
-    "Solace"
+    "Solace",
+    "mqtt",
+    "event mesh"
   ],
   "author": "Edward Funnekotter",
   "license": "MIT",

@@ -7,7 +7,6 @@ export class ToolBar extends jst.Component {
     super();
 
     this.world = world;
-
     this.resize(scale);
 
   }
@@ -18,8 +17,7 @@ export class ToolBar extends jst.Component {
         position: 'absolute',
         top$px: 0,
         left$px: 0,
-        right$px: 0,
-        //border$px: [1, 'solid', '#888']
+        right$px: 0
       },
       buttonBar$c: {
 
@@ -44,12 +42,12 @@ export class ToolBar extends jst.Component {
   render() {
     return jst.$div({cn: '-toolBar'},
       jst.$div({cn: '-buttonBar'},
-        jst.$div({cn: '-button', events: {click: e => this.start()}}, "Start"),
-        jst.$div({cn: '-button', events: {click: e => this.click('emitter')}}, "Event Emitter"),
-        jst.$div({cn: '-button', events: {click: e => this.click('portal')}}, "Portal"),
-        jst.$div({cn: '-button', events: {click: e => this.click('fixed-body')}}, "Rectangle"),
-        jst.$div({cn: '-button', events: {click: e => this.click('remove-events')}}, "Remove All Events"),
-        jst.$div({cn: '-button', events: {click: e => this.removeSelected()}}, "Remove Selected"),
+        jst.$div({cn: '-button', events: {click: e => this.start()}},               "Start"),
+        jst.$div({cn: '-button', events: {click: e => this.addItem('emitter')}},    "Event Emitter"),
+        jst.$div({cn: '-button', events: {click: e => this.addItem('portal')}},     "Portal"),
+        jst.$div({cn: '-button', events: {click: e => this.addItem('fixed-body')}}, "Rectangle"),
+        jst.$div({cn: '-button', events: {click: e => this.removeAllEvents()}},     "Remove All Events"),
+        jst.$div({cn: '-button', events: {click: e => this.removeSelected()}},      "Remove Selected"),
       )
     )
   }
@@ -59,13 +57,14 @@ export class ToolBar extends jst.Component {
     this.refresh();
   }
 
-  click(type) {
-    if (type == "remove-events") {
-      this.world.removeAllEvents();
-    }
-    else {
-      this.world.addItem(type)
-    }
+  // Button Handlers
+  
+  addItem(type) {
+    this.world.addItem(type)
+  }
+
+  removeAllEvents() {
+    this.world.removeAllEvents();
   }
 
   removeSelected() {

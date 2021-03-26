@@ -11,7 +11,6 @@ export class Header extends jst.Component {
     return {
       header$c: {
         fontFamily: "'Times New Roman', 'Times', serif",
-        //fontWeight: "bold",
         fontSize: "200%",
         color: "white",
         backgroundColor: "#00c895",
