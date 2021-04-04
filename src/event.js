@@ -2,7 +2,7 @@
 
 import {jst}            from 'jayesstee';
 
-
+// Names to color codes
 export const EventColors = {
   red: '#ff7777',
   green: '#00c895',
@@ -14,21 +14,20 @@ export class Event extends jst.Component {
   constructor(world, scale, offsetX, offsetY, opts) {
     super();
 
-    this.world = world;
+    this.world        = world;
 
-    this.width = (opts.width || 20) * scale;
-    this.height = (opts.height || 20) * scale;
+    this.width        = (opts.width  || 20);
+    this.height       = (opts.height || 20);
 
-    this.halfWidth = this.width/2;
-    this.halfHeight = this.height/2;
+    this.halfWidth    = this.width/2;
+    this.halfHeight   = this.height/2;
 
-    this.x = ((opts.x - this.halfWidth) || 50) * scale + offsetX;
-    this.y = ((opts.y - this.halfHeight) || 50) * scale + offsetY;
+    this.x            = ((opts.x - this.halfWidth)  || 50);
+    this.y            = ((opts.y - this.halfHeight) || 50);
 
-    this.cx = this.x + this.halfWidth;
-    this.cy = this.y + this.halfHeight;
+    this.cx           = this.x;// + this.halfWidth;
+    this.cy           = this.y;// + this.halfHeight;
 
-    // this.rotation    = opts.rotate*Math.PI/180;
     this.angle        = opts.rotate;
     this.color        = opts.color || "lightblue";
     this.text         = opts.text;
@@ -37,8 +36,8 @@ export class Event extends jst.Component {
     this.cornerRadius = opts.cornerRadius;
     this.topic        = opts.topic;
 
-    this.isEvent  = true;
-    this.type     = "square";      
+    this.isEvent      = true;
+    this.type         = "square";      
 
     this.resize(scale, offsetX, offsetY);
 
@@ -46,6 +45,7 @@ export class Event extends jst.Component {
 
   }
 
+  // CSS shared with all Event components
   cssLocal() {
     return {
       body$c: {
@@ -60,15 +60,16 @@ export class Event extends jst.Component {
     };
   }
 
+  // CSS specific to each instance
   cssInstance() {
     return {
       body$c: {
-        width$px: this.width,
-        height$px: this.height,
+        width$px: this.width * this.scale,
+        height$px: this.height * this.scale,
         lineHeight$px: this.height,
         transform: jst.rotate(jst.rad(this.angle)),
-        left$px: this.x,
-        top$px: this.y,
+        left$px: this.x * this.scale + this.offsetX,
+        top$px: this.y * this.scale + this.offsetY,
         borderRadius$px: this.cornerRadius || 0,
         backgroundColor:  EventColors[this.color],
       },
@@ -76,20 +77,27 @@ export class Event extends jst.Component {
   }
 
   render() {
+    console.log("Rendering:", this.display)
     return this.display && 
       jst.$div({cn: '-body --body', 
+                ref: 'myDiv',
                 events: {click: () => this.showTopic()},
-                style: `left: ${this.x}px; top: ${this.y}px; transform: rotate(${this.angle}rad)`}, this.text);
+                // Note that we are using style for the things that are changing very frequently
+                // This will let us more efficiently move the div around
+                style: `left: ${this.x * this.scale + this.offsetX}px; top: ${this.y * this.scale + this.offsetY}px; transform: rotate(${this.angle}rad)`}, this.text);
   }
 
   resize(scale, offsetX, offsetY) {
     this.scale = scale;
     this.offsetX = offsetX;
     this.offsetY = offsetY;
+    this.refresh();
   }
 
   publish(messaging, topicPrefix, myBody, portalInfo) {
-    // Called from a portal to let this event know that it has entered the portal
+
+    // Called from a portal to let this event know that it has entered the portal and should
+    // be published to the broker
     this.body = myBody;
 
     let vx, vy;
@@ -114,16 +122,26 @@ export class Event extends jst.Component {
       id:              this.id,
       guid:            this.guid
     }
-    this.world.removeEvent(this)
 
     this.lastTopic = topicPrefix + `${this.type}/${this.color}/${this.id.toString().padStart(5, "0")}/${Math.ceil(this.body.area).toString().padStart(6, "0")}`;
     messaging.publish(this.lastTopic, msg, {qos: 1});
+
+    // Remove ourselves
+    this.world.removeEvent(this);
   }
 
+  // This shows the topic used when transiting the last portal
+  // It will be undefined if it has not yet gone through a portal
   showTopic() {
-    alert(`Topic: ${this.topic}`)
+    if (this.topic) {
+      alert(`Topic: ${this.topic}`);
+    }
+    else {
+      alert("Topic not set until it has gone through a portal");
+    }
   }
 
+  // TODO - not currently used - the world creates its own right now
   addMatterBlock() {
     // Create a matter block that is the same size as this
     this.matterBlocks = [];
@@ -151,9 +169,15 @@ export class Event extends jst.Component {
       needsRefresh = true;
     }
 
-    if (needsRefresh || !this.display) {
+    if (!this.display) {
       this.display = true;
       this.refresh({skipCss: true});
+    }
+
+    if (needsRefresh) {
+      // This will just change the local style on the object - this is more efficient than 
+      // re-rendering the whole thing again
+      this.myDiv.el.style = `left: ${this.x}px; top: ${this.y}px; transform: rotate(${this.angle}rad)`;
     }
 
   }

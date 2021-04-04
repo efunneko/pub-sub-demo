@@ -17,8 +17,8 @@ export class Matter extends jst.Component {
     this.collisionHandlers = {};
     this.renderBodies      = {};
 
-    this.events = opts.events || {};
-    this.world  = world;
+    this.events            = opts.events || {};
+    this.world             = world;
 
     this.initEngine();
   }
@@ -28,13 +28,9 @@ export class Matter extends jst.Component {
       matterDiv$c: {
         position: 'relative',
         display: 'inline-block',
-        //width: '100%',
-        //height: '100%',
       },
       matter$c: {
         display: 'inline-block',
-        //width: '100%',
-        //height: '100%'
       },
     }
   }
@@ -42,22 +38,19 @@ export class Matter extends jst.Component {
   render() {
     return jst.$div({cn: "-matterDiv"},
       jst.$div({cn: "-matter", ref: "div"},
+        // TODO - at the moment, this class is responsibile for rendering
+        // some of the objects in the scene. This should be changed so that
+        // this class is not a JST component at all and all objects are 
+        // rendered under the world component
         Object.values(this.renderBodies)
       ),
     );
   }
 
-  postRender() {
-  }
-
   initEngine() {
   
-    var engine = Engine.create();
-    this.engine = engine;
-    Events.on(engine, "collisionStart", (e) => this.collision(e));
-
-    // run the engine
-    //Engine.run(engine);
+    this.engine  = Engine.create();
+    Events.on(this.engine, "collisionStart", (e) => this.collision(e));
 
     // Start the renderer
     requestAnimationFrame((time) => this.renderMatter(time));
@@ -79,7 +72,6 @@ export class Matter extends jst.Component {
       };
       if (opts.cornerRadius) {
         opts.chamfer = {radius: opts.cornerRadius};
-        //delete(opts.cornerRadius);
       }
       let box = Bodies.rectangle(item[0], item[1], item[2], item[3], opts);
       if (opts.renderObj) {
@@ -105,9 +97,9 @@ export class Matter extends jst.Component {
     let box = Bodies.rectangle(750, 10, 80, 80, {friction: 0, frictionStatic:0, chamfer: {radius: 10}});
     this.renderBodies[box.id] = new RenderBody(box.id, {width: 80, height: 80, cornerRadius: 10, text: "Hi"});
     this.refresh();
+    
     Body.setVelocity( box, {x: Math.random(), y: 0});
     
-
     // add all of the bodies to the world
     World.add(this.engine.world, [box]);
     

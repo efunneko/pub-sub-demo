@@ -151,7 +151,6 @@ export class Portal extends jst.Component {
       frontPortal$c: {
         position: 'fixed',
         left$px: 0,
-        //left$px: PORTAL_WIDTH/PORTAL_SQUISH2 * this.scale,
         borderRadius$px: '45% 55% 55% 45% / 50% 50% 50% 50%',
         width$px: PORTAL_WIDTH/PORTAL_SQUISH * this.scale,
         height$px: PORTAL_WIDTH * this.scale,
@@ -216,8 +215,6 @@ export class Portal extends jst.Component {
         position: 'absolute',
         fontSize$px: PORTAL_WIDTH * 0.08 * this.scale,
         padding$px: 1 * this.scale,
-        //width$px: PORTAL_WIDTH * 1.3 * this.scale,
-        //height$px: PORTAL_WIDTH * 1.3 * this.scale,
         borderRadius$px: '5%',
         backgroundColor: 'white',
         color: '#222',

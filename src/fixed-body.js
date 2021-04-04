@@ -1,21 +1,19 @@
 // fixed-body.js - handles a moveable fixed body
 
-import {jst} from 'jayesstee';
+import {jst}        from 'jayesstee';
+import {Entity}     from "./entity.js";
 
-const START_WIDTH           = 10;
 const CORNER_SIZE           = 2;
 const KNOB_WIDTH            = 3;
 
-export class FixedBody extends jst.Component {
+export class FixedBody extends Entity {
   constructor(world, scale, offsetX, offsetY, opts) {
-    super();
-
-    this.world = world;
+    super(world, scale, offsetX, offsetY);
 
     this.x = opts.x || 50;
     this.y = opts.y || 50;
 
-    this.width = opts.width || 20;
+    this.width  = opts.width || 20;
     this.height = opts.height || 20;
 
     this.cx = this.x + this.width/2;
@@ -25,9 +23,7 @@ export class FixedBody extends jst.Component {
 
     this.showControls = false;
 
-    this.resize(scale, offsetX, offsetY);
-
-    this.addMatterBlock();
+    this.addMatterBlocks();
 
   }
 
@@ -103,7 +99,6 @@ export class FixedBody extends jst.Component {
   }
 
   render() {
-    console.log("rendering")
     return jst.$div({cn: '-body --body', events: {click: e => this.select(e)}},
       jst.if(this.showControls) &&
       jst.$div({cn: '-controls --controls'},
@@ -117,18 +112,7 @@ export class FixedBody extends jst.Component {
     );
   }
 
-  resize(scale, offsetX, offsetY) {
-    this.scale = scale;
-    this.offsetX = offsetX;
-    this.offsetY = offsetY;
-  }
-  
-  remove() {
-    console.log("removing:", this.matterBlocks)
-    this.matterBlocks.forEach(block => this.world.remove(block));
-  }
-
-  addMatterBlock() {
+  addMatterBlocks() {
     this.matterBlocks = [];
     let opts = {
       isStatic: true, 
@@ -157,7 +141,7 @@ export class FixedBody extends jst.Component {
   rotate(delta) {
     this.rotationRad  = this.rotationRad + delta;
     this.matterBlocks.forEach(block => this.world.remove(block));
-    this.addMatterBlock();   
+    this.addMatterBlocks();   
     this.refresh();
   }
 
@@ -166,7 +150,7 @@ export class FixedBody extends jst.Component {
     this.matterBlocks.forEach(block => this.world.remove(block));
     this.matterBlocks = [];
     if (moveMatter) {
-      this.addMatterBlock();   
+      this.addMatterBlocks();   
     }
     this.refresh();
   }
@@ -181,7 +165,7 @@ export class FixedBody extends jst.Component {
     this.matterBlocks.forEach(block => this.world.remove(block));
     this.matterBlocks = [];
     if (moveMatter) {
-      this.addMatterBlock();   
+      this.addMatterBlocks();   
     }
     this.refresh();
   }
@@ -198,7 +182,7 @@ export class FixedBody extends jst.Component {
     this.matterBlocks.forEach(block => this.world.remove(block));
     this.matterBlocks = [];
     if (moveMatter) {
-      this.addMatterBlock();   
+      this.addMatterBlocks();   
     }
     this.refresh();
   }
@@ -275,7 +259,6 @@ export class FixedBody extends jst.Component {
     let nx  = rnmx - this.clickStart.cornerX * nw;
     let ny  = rnmy - this.clickStart.cornerY * nh;
 
-    console.log("new", nx, ny, nw, nh)
     this.sizeTo(nx, ny, nw, nh, matterMove);
   }
 

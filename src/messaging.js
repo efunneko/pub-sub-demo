@@ -55,7 +55,6 @@ export class Messaging {
   }
 
   subscribe(qos, subscription, callback) {
-    console.log("subscribing to:", subscription, qos)
     let subId = this.subSeq++;
     this.subscriptions.push({sub: subscription, qos: qos, callback: callback, id: subId})
     if (callback) {

@@ -9,10 +9,11 @@ export class ClickableRange extends jst.Component {
     this.numButtons  = opts.numButtons || 10;
     this.value       = opts.value || 1;
     this.color       = opts.color || 'blue';
-    this.width       = opts.width || 100;
-    this.height      = opts.height || 10;
-    this.borderWidth = opts.borderWidth || 1;
+    this.width       = opts.width || 11;
+    this.height      = opts.height || 1.7;
+    this.borderWidth = opts.borderWidth || 0.25;
     this.events      = opts.events;
+    console.log("CR:", this. height)
     //this.icon        = opts.icon;
 
   }
@@ -23,10 +24,10 @@ export class ClickableRange extends jst.Component {
 
       },
       first$c: {
-        borderRadius$px: [2, 0, 0, 2]
+        borderRadius$px: [0.05 * this.height, 0, 0, 0.05 * this.height]
       },
       last$c: {
-        borderRadius$px: [0, 2, 2, 0]
+        borderRadius$px: [0, 0.05 * this.height, 0.5 * this.height, 0]
       }
     }
   }
@@ -35,6 +36,7 @@ export class ClickableRange extends jst.Component {
     return {
       full$c: {
         display: 'inline-block',
+        //width$px: this.width * this.scale,
         width$px: this.width,
         height$px: this.height,
         lineHeight$px: 0,
@@ -43,7 +45,7 @@ export class ClickableRange extends jst.Component {
         width: '100%',
         height: '100%',
         padding: '3%',
-        borderRadius$px: 2,
+        borderRadius$px: 0.05 * this.height,
         backgroundColor: 'white'
       },
       button$c: {
@@ -61,6 +63,7 @@ export class ClickableRange extends jst.Component {
   }
 
   render() {
+    console.log("clickrange", this.scale, this.width)
     return jst.$div({cn: '--full -full'},
       jst.$div({cn: '--range -range'},
         new Array(this.numButtons).fill(0).map((item, i) => 
@@ -71,6 +74,12 @@ export class ClickableRange extends jst.Component {
           }))
       )
     );
+  }
+
+  resize(width, height) {
+    this.width  = width;
+    this.height = height;
+    this.refresh();
   }
 
   select(e, index) {

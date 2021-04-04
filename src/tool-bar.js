@@ -17,7 +17,8 @@ export class ToolBar extends jst.Component {
         position: 'absolute',
         top$px: 0,
         left$px: 0,
-        right$px: 0
+        right$px: 0,
+        zIndex: 10
       },
       buttonBar$c: {
 
@@ -25,6 +26,7 @@ export class ToolBar extends jst.Component {
       button$c: {
         display: 'inline-block',
         fontFamily: "'Arial', 'sans'",
+        backgroundColor: 'white',
         margin$px: [this.scale * 1, this.scale * 1, 0, this.scale * 1],
         padding$px: this.scale * 1,
         borderRadius$px: 1 * this.scale,

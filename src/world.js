@@ -6,12 +6,17 @@ import {Portal}                from "./portal.js";
 import {FixedBody}             from "./fixed-body.js";
 import {Emitter}               from "./emitter.js";
 import {Event}                 from './event';
+import {Broker}                from "./broker";
 import {Messaging}             from './messaging';
 import {ToolBar}               from './tool-bar';
+
+const MOUSE_WHEEL_SCALE_FACTOR = 1.05;
 
 export class World extends jst.Component {
   constructor(app) {
     super();
+
+    this.objects        = [];
 
     this.resize();
 
@@ -19,6 +24,13 @@ export class World extends jst.Component {
     this.animTicks      = 0;
     this.timeoutSeq     = 0;
     this.timeouts       = {};
+
+    this.scale          = 4;
+    this.offsetX = (window.innerWidth  - 100 * this.scale)/2;
+    this.offsetY = (window.innerHeight - 100 * this.scale)/2;
+    this.offsetX = 0;
+    this.offsetY = 0;
+
 
     let state = this.load();
     if (state) {
@@ -67,6 +79,9 @@ export class World extends jst.Component {
     }
     this.events = {};
 
+    this.objects.push(new Broker(this, this.scale, this.offsetX, this.offsetY,
+      {x: 50, y: 50, text: "HI"})); 
+
     document.addEventListener("keydown", e => this.keyDown(e));
 
   }
@@ -87,8 +102,11 @@ export class World extends jst.Component {
                      events: {
                        pointermove: e => this.pointerMove(e), 
                        pointerup:   e => this.pointerUp(e),
-                       click:       e => this.pointerDown(e),
-                       keydown:     e => this.keyDown(e)
+                       pointerdown: e => this.pointerDown(e),
+                       click:       e => this.click(e),
+                       keydown:     e => this.keyDown(e),
+                       DOMMouseScroll: (e) => this.mouseWheel(e),
+                       wheel:          (e) => this.mouseWheel(e),
                       }
                     },
       this.toolBar,
@@ -98,10 +116,19 @@ export class World extends jst.Component {
   }
 
   resize() {
+    /*
     this.scale   = Math.min(window.innerWidth, window.innerHeight)/120;
     this.scale   = 4;
     this.offsetX = (window.innerWidth  - 100 * this.scale)/2;
     this.offsetY = (window.innerHeight - 100 * this.scale)/2;
+    */
+    this.objects.forEach(obj => {
+      if (obj.resize) {
+        obj.resize(this.scale, this.offsetX, this.offsetY);
+      }
+      this.refresh();
+    });
+
   }
 
   createConnection(opts) {
@@ -274,22 +301,87 @@ export class World extends jst.Component {
     if (this.selectedEntity && this.selectedEntity.pointerMove) {
       this.selectedEntity.pointerMove(e);
     }
+    else {
+      if (this.panning) {
+        this.panState.dx = this.panState.clientX - e.clientX;
+        this.panState.dy = this.panState.clientY - e.clientY;
+        console.log("sched?", this.panState.scheduled)
+        if (!this.panState.scheduled) {
+          requestAnimationFrame(() => this.doPan());
+        }
+      }
+    }
+  }
+
+  doPan() {
+    this.panState.scheduled = false;
+    this.offsetX            = this.panState.offsetX - this.panState.dx;
+    this.offsetY            = this.panState.offsetY - this.panState.dy;
+    this.resize();
   }
 
   pointerUp(e) {
+    console.log("pointerup")
     e.preventDefault();
     e.stopPropagation();
+    this.panning = false;
     if (this.selectedEntity && this.selectedEntity.pointerUp) {
       this.selectedEntity.pointerUp(e);
     }
   }
 
   pointerDown(e) {
+    console.log("pointerdown")
     //e.preventDefault();
     //e.stopPropagation();
     if (this.selectedEntity) {
       this.selectedEntity.unselect();
+      this.selectedEntity = null;
     }
+      if (1 || e.ctrlKey) {
+        this.panning = true;
+        this.panState = {
+          clientX:   e.clientX,
+          clientY:   e.clientY,
+          offsetX:   this.offsetX,
+          offsetY:   this.offsetY,
+          scheduled: false,
+          dx:        0,
+          dy:        0
+        }
+      }
+    }
+
+  click(e) {
+    if (this.selectedEntity) {
+      this.selectedEntity.unselect();
+      this.selectedEntity = null;
+    }
+  }
+
+  mouseWheel(e) {
+    if (e.ctrlKey) {
+      // Zoom
+      console.log("offsets", this.offsetX, this.offsetY, this.scale)
+
+      if (e.deltaY < 0) {
+        this.scale *= MOUSE_WHEEL_SCALE_FACTOR;
+        this.offsetX -= (e.offsetX * (MOUSE_WHEEL_SCALE_FACTOR - 1));
+        this.offsetY -= (e.offsetY * (MOUSE_WHEEL_SCALE_FACTOR - 1));
+
+      }
+      else {
+        this.scale /= MOUSE_WHEEL_SCALE_FACTOR;
+        this.offsetX -= (e.offsetX * (1/MOUSE_WHEEL_SCALE_FACTOR - 1));
+        this.offsetY -= (e.offsetY * (1/MOUSE_WHEEL_SCALE_FACTOR - 1));
+      }
+
+      this.resize();
+    }
+    
+    e.preventDefault();
+    e.stopPropagation();
+
   }
   
   keyDown(e) {

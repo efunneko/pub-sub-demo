@@ -3,58 +3,55 @@
 import {jst}                from 'jayesstee';
 import {ClickableRange}     from './widgets';
 import {EventColors}        from './event';
+import {Entity}             from './entity'
 
-const EMITTER_WIDTH         = 20;
-const EMITTER_HEIGHT        = 20;
+const EMITTER_SIZE          = 20;
 
-export class Emitter extends jst.Component {
+export class Emitter extends Entity {
   constructor(world, scale, offsetX, offsetY, opts) {
-    super();
+    super(world, scale, offsetX, offsetY);
 
-    this.world = world;
+    this.world        = world;
+       
+    this.id           = opts.id;
+    this.text         = opts.text;
+        
+    this.x            = opts.x || 50;
+    this.y            = opts.y || 50;
 
-    this.id   = opts.id;
-    this.text = opts.text;
+    this.cx           = this.x + EMITTER_SIZE/2;
+    this.cy           = this.y + EMITTER_SIZE/2;
 
-    this.x    = opts.x || 50;
-    this.y    = opts.y || 50;
+    this.rotationRad  = opts.rotation || 0;
 
-    this.cx = this.x + EMITTER_WIDTH/2;
-    this.cy = this.y + EMITTER_HEIGHT/2;
-
-    this.rotationRad = opts.rotation || 0;
-
-    this.eventWidth  = 12;
-    this.eventSeq    = 0;
-
-    this.color       = opts.color || 'green';
+    this.eventWidth   = 12;
+    this.eventSeq     = 0;
 
     this.showControls = false;
 
-    this.resize(scale, offsetX, offsetY);
+    this.color        = opts.color || 'green';
+    this.size         = 5;
+    this.rate         = 2;
+    this.speed        = 3;   
+    this.isOn         = false;
 
     this.addMatterBlocks();
 
+    this.resize(scale, offsetX, offsetY);
     
-    this.size  = 5;
-    this.rate  = 2;
-    this.speed = 3;
-
-    this.isOn  = false;
-
-    this.speedRange = new ClickableRange({width: EMITTER_WIDTH * 0.55 * this.scale, height: EMITTER_HEIGHT * 0.07 * this.scale, value: this.speed, events: {change: val => {this.speed = val; this.world.save()}}});
-    this.sizeRange  = new ClickableRange({width: EMITTER_WIDTH * 0.55 * this.scale, height: EMITTER_HEIGHT * 0.07 * this.scale, value: this.size,  events: {change: val => {this.size  = val; this.world.save()}}});
-    this.freqRange  = new ClickableRange({width: EMITTER_WIDTH * 0.55 * this.scale, height: EMITTER_HEIGHT * 0.07 * this.scale, value: this.rate,  events: {change: val => {this.rate  = val; this.world.save();}}});
+    this.speedRange = new ClickableRange({width: this.ss(0.55), height: this.ss(0.12), value: this.speed, events: {change: val => {this.speed = val; this.world.save()}}});
+    this.sizeRange  = new ClickableRange({width: this.ss(0.55), height: this.ss(0.12), value: this.size,  events: {change: val => {this.size  = val; this.world.save()}}});
+    this.freqRange  = new ClickableRange({width: this.ss(0.55), height: this.ss(0.12), value: this.rate,  events: {change: val => {this.rate  = val; this.world.save();}}});
 
   }
 
+  // Specific CSS for each emitter instance
   cssInstance() {
     return {
       emitter$c: {
         top$px: this.y * this.scale + this.offsetY,
         left$px: this.x * this.scale + this.offsetX,
         transform: jst.rotate(jst.rad(this.rotationRad)),
-        // boxShadow$px: [0, 0, 1 * this.scale, 2 * this.scale, this.ringColor],
         backgroundColor: this.ringColor,
       },
       panel$c: {
@@ -63,54 +60,55 @@ export class Emitter extends jst.Component {
     }
   }
 
+  // Shared CSS for all emitters
   cssLocal() {
     return {
       emitter$c: {
         position: 'fixed',
         left$px: 0,
-        width$px: EMITTER_WIDTH * this.scale,
-        height$px: EMITTER_HEIGHT * this.scale,
-        borderRadius$px: 3 * this.scale,
+        width$px: this.ss(1),
+        height$px: this.ss(1),
+        borderRadius$px: this.ss(3/20),
         background: '#888',
         zIndex: 2
       },
       back$c: {
         position: 'absolute',
-        left$px: -EMITTER_WIDTH*0.1 * this.scale,
-        top$px: EMITTER_WIDTH*0.1 * this.scale,
+        left: '-10%', 
+        top: '10%', 
         background: 'linear-gradient(0deg, rgba(135,135,135,1) 0%, rgba(55,55,55,1) 25%, rgba(45,45,45,1) 75%, rgba(180,180,180,1) 100%)',
-        width$px: EMITTER_WIDTH*0.1 * this.scale,
-        height$px: EMITTER_HEIGHT*0.8 * this.scale,
+        width: '10%', 
+        height: '80%', 
       },
       barrel$c: {
         position: 'absolute',
-        right$px: -EMITTER_WIDTH*0.2 * this.scale,
-        top$px: EMITTER_WIDTH*0.1 * this.scale,
+        right$px: '-20%', 
+        top$px: '10%', 
         background: 'linear-gradient(0deg, rgba(135,135,135,1) 0%, rgba(55,55,55,1) 25%, rgba(45,45,45,1) 75%, rgba(180,180,180,1) 100%)',
-        width$px: EMITTER_WIDTH*0.2 * this.scale,
-        height$px: EMITTER_HEIGHT*0.8 * this.scale,
+        width$px: '20%', 
+        height$px: '80%',
       },
       front$c: {
         position: 'absolute',
-        right$px: -EMITTER_WIDTH*0.3 * this.scale,
-        top$px: EMITTER_WIDTH*0 * this.scale,
+        right$px: '-30%',
+        top$px: 0,
         background: 'linear-gradient(0deg, rgba(135,135,135,1) 0%, rgba(55,55,55,1) 25%, rgba(45,45,45,1) 75%, rgba(180,180,180,1) 100%)',
-        width$px: EMITTER_WIDTH*0.1 * this.scale,
-        height$px: EMITTER_HEIGHT * this.scale,
-        border$px: [1, 'solid', '#555']
+        width$px: '10%', 
+        height$px: '100%',
+        border$px: ['1%', 'solid', '#555']
       },
       rotateKnob$c: {
         position: 'absolute',
-        top$px: (EMITTER_WIDTH/2 - EMITTER_WIDTH * 0.1) * this.scale,
-        left$px: - (EMITTER_WIDTH/2 - EMITTER_WIDTH/20) * this.scale,
-        width$px: EMITTER_WIDTH * 0.09 * this.scale,
-        height$px: EMITTER_WIDTH * 0.2 * this.scale,
-        borderRadius$px: EMITTER_WIDTH * 0.045 * this.scale,
-        lineHeight$px: EMITTER_WIDTH * 0.22 * this.scale,
-        fontSize$px: EMITTER_WIDTH * 0.13 * this.scale,
+        top$px: '40%',
+        left$px: '-45%', 
+        width$px: '9%', 
+        height$px: '20%',
+        borderRadius$px: this.ss(0.045),
+        lineHeight$px: this.ss(0.22),
+        fontSize$px: this.ss(0.13),
         verticalAlign: 'middle',
         textAlign: 'center',
-        border$px: [1, 'solid', 'black'],
+        border$px: [this.ss(0.01), 'solid', 'black'],
         backgroundColor: 'white',
         zIndex: 1
       },
@@ -118,73 +116,75 @@ export class Emitter extends jst.Component {
         cursor: "grab",
       },
       gripKnob$c: {
-        top$px: (EMITTER_WIDTH/2 - EMITTER_WIDTH * 0.065) * this.scale,
-        left$px: -EMITTER_WIDTH * 0.2 * this.scale,
+        top$px: '43.5%',
+        left$px: '-20%', 
       },
       gripKnob$c$hover: {
         cursor: "move"
       },
       knob$c: {
         position: 'absolute',
-        width$px: EMITTER_WIDTH * 0.13 * this.scale,
-        height$px: EMITTER_WIDTH * 0.13 * this.scale,
-        lineHeight$px: EMITTER_WIDTH * 0.13 * this.scale,
+        width$px: '13%', 
+        height$px: '13%',
+        lineHeight$px: this.ss(0.13),
         verticalAlign: 'middle',
         textAlign: 'center',
         borderRadius$px: '50%',
         backgroundColor: 'white',
-        border$px: [1, 'solid', 'black']
+        border$px: [this.ss(0.01), 'solid', 'black']
       },
       knob$c$hover: {
         backgroundColor: "#ff8",
       },
       panel$c: {
-        margin$px: EMITTER_WIDTH*0.05 * this.scale, 
-        padding$px: EMITTER_WIDTH*0.05 * this.scale, 
-        width$px: EMITTER_WIDTH*0.80 * this.scale,
-        height$px: EMITTER_HEIGHT*0.80 * this.scale,
-        boxShadow$px: [0, 0, 2, jst.rgba(0,0,0,0.3), 'inset'],
-        borderRadius$px: 2 * this.scale,
-        //background: 'rgb(0,200,149)',
-        //background: 'linear-gradient(117deg, rgba(0,200,149,1) 0%, rgba(116,215,190,1) 11%, rgba(158,226,208,1) 13%, rgba(130,208,188,1) 17%, rgba(116,215,190,1) 19%, rgba(158,226,208,1) 23%, rgba(130,208,188,1) 25%, rgba(0,200,149,1) 100%)',
-        //background: 'linear-gradient(117deg, rgba(187,181,181,1) 0%, rgba(213,213,213,1) 11%, rgba(238,230,230,1) 13%, rgba(203,203,203,1) 15%, rgba(180,180,180,1) 100%)'
+        margin$px: '5%', 
+        padding$px: '5%',
+        width$px: '80%', 
+        height$px: '80%',
+        boxShadow$px: [0, 0, this.ss(0.04), jst.rgba(0,0,0,0.8), 'inset'],
+        borderRadius$px: this.ss(0.1),
+        lineHeight$px: 0
+      },
+      topButtons$c: {
+        whiteSpace: 'nowrap'
       },
       button$c: {
         display: 'inline-block',
-        fontSize$px: EMITTER_WIDTH * 0.15 * this.scale,
+        fontSize$px: this.ss(0.15),
         padding$px: [0.5 * this.scale, 0.5 * this.scale, 0 * this.scale, 0.5 * this.scale],
-        border$px: [1, "solid", "#bbb"],
-        borderRadius$px: 1 * this.scale,
+        border$px: [this.ss(0.01), "solid", "#bbb"],
+        borderRadius$px: this.ss(0.05),
         backgroundColor: 'white'
       },
       buttonGroup$c: {
         display: 'inline-block',
-        //backgroundColor: 'white',
-        marginBottom$px: EMITTER_HEIGHT*0.01 * this.scale,
-        width$px: EMITTER_HEIGHT*0.36 * this.scale,
-        height$px: EMITTER_HEIGHT*0.1 * this.scale,
+        marginBottom$px: this.ss(0.01),
+        width$px: this.ss(0.36),
+        height$px: this.ss(0.1),
       },
       buttonDoubleRow$c: {
         display: 'inline-block',
         backgroundColor: 'white',
-        marginLeft$px: EMITTER_HEIGHT*0.01 * this.scale,
-        paddingTop$px: EMITTER_HEIGHT*0.01 * this.scale,
-        width$px: EMITTER_HEIGHT*0.37 * this.scale,
-        height$px: EMITTER_HEIGHT*0.22 * this.scale,
-        borderRadius$px: EMITTER_HEIGHT*0.02 * this.scale,
+        whiteSpace: 'normal',
+        marginLeft$px: this.ss(0.01),
+        paddingTop$px: this.ss(0.01),
+        width$px: this.ss(0.37),
+        height$px: this.ss(0.22),
+        borderRadius$px: this.ss(0.02),
         verticalAlign: 'bottom',
         lineHeight$px: 0
       },
       colorButton$c: {
         display: 'inline-block',
-        marginLeft$px: EMITTER_HEIGHT*0.01 * this.scale,
-        width$px: EMITTER_HEIGHT*0.08 * this.scale,
-        height$px: EMITTER_HEIGHT*0.1 * this.scale,
+        marginLeft$px: this.ss(0.01),
+        width$px: this.ss(0.08),
+        height$px: this.ss(0.1),
         opacity: 0.6,
       },
       randButton$c: {
         display: 'inline-block',
-        //background: 'rgb(200,0,0)';
+        marginLeft$px: this.ss(0.01),
+        width$px: this.ss(0.35),
         background: 'linear-gradient(117deg, rgba(200,0,0,1) 0%, rgba(215,181,116,1) 19%, rgba(224,226,158,1) 39%, rgba(132,208,130,1) 55%, rgba(74,161,151,1) 75%, rgba(1,0,200,1) 100%)'
       },
       colorButton$c$hover: {
@@ -194,23 +194,36 @@ export class Emitter extends jst.Component {
         opacity: 1
       },
       speed$c: {
-        fontSize$px: EMITTER_WIDTH * 0.15 * this.scale,
-        lineHeight$px: EMITTER_WIDTH * 0.15 * this.scale
+        fontSize$px: this.ss(0.15),
+        lineHeight$px: this.ss(0.15)
       },
       rangeButton$c: {
         display: 'inline-block',
-        border$px: [EMITTER_WIDTH * 0.02, 'solid', '#777']
+        border$px: [this.ss(0.02), 'solid', '#777']
       },
       rangeSelect$c: {
+        position: 'absolute',
         verticalAlign: 'middle',
         lineHeight$px: 0,
-        marginTop$px: 0.7 * this.scale
+        marginTop$px: this.ss(0.7/20)
       },
       rangeIcon$c: {
         verticalAlign: 'middle',
-        marginLeft$px: EMITTER_WIDTH * 0.03 * this.scale,
-        width$px: EMITTER_WIDTH * 0.15 * this.scale,
-        fontSize$px: EMITTER_WIDTH * 0.1 * this.scale,
+        marginLeft$px: this.ss(0.03),
+        width$px: this.ss(0.15),
+        fontSize$px: this.ss(0.1),
+      },
+      rangeSize$c: {
+        top: '35%',
+        left: '10%'
+      },
+      rangeSpeed$c: {
+        top: '53%',
+        left: '10%'
+      },
+      rangeRate$c: {
+        top: '71%',
+        left: '10%'
       }
     }
   }
@@ -222,25 +235,31 @@ export class Emitter extends jst.Component {
         jst.$div({cn: '-barrel --barrel'}),
         jst.$div({cn: '-front --front'}),
         jst.$div({cn: '-panel --panel'},
-          jst.$div({cn: '-button', events: {click: e => this.toggle(e)}}, jst.$i({cn: `fas fa-${this.isOn ? 'pause' : 'play'}`})),
-          jst.$div({cn: '-button', events: {click: e => this.fire(e)}}, jst.$i({cn: 'fas fa-step-forward'})),
-          jst.$div({cn: '-buttonDoubleRow'},
-           jst.$div({cn: '-buttonGroup'},
-             Object.keys(EventColors).map(col => jst.$div({cn: `-colorButton ${col == this.color ? '-selected' : ''}`, style: `background-color: ${EventColors[col]}`, events: {click: e => this.setColor(col)}})),
-           ),
-           jst.$div({cn: '-buttonGroup -randButton',    events: {click: e => this.setColor('random')}},
-             jst.$div({cn: '-randButton',    events: {click: e => this.setColor('random')}}),
-           ),
+          jst.$div({cn: '-topButtons'},
+            jst.$div({cn: '-button', events: {click: e => this.toggle(e)}}, jst.$i({cn: `fas fa-${this.isOn ? 'pause' : 'play'}`})),
+            jst.$div({cn: '-button', events: {click: e => this.fire(e)}}, jst.$i({cn: 'fas fa-step-forward'})),
+            jst.$div({cn: '-buttonDoubleRow'},
+             jst.$div({cn: '-buttonGroup'},
+               Object.keys(EventColors).map(col => jst.$div({
+                 cn: `-colorButton ${col == this.color ? '-selected' : ''}`, 
+                 style: `background-color: ${EventColors[col]}`, 
+                 events: {click: e => this.setColor(col)}
+                })),
+             ),
+             jst.$div({cn: '-buttonGroup -randButton', events: {click: e => this.setColor('random')}},
+               jst.$div({cn: '-randButton', events: {click: e => this.setColor('random')}}),
+             ),
+            ),
           ),
-          jst.$div({cn: '-rangeSelect'},
+          jst.$div({cn: '-rangeSelect -rangeSpeed'},
             jst.$i({cn: '-rangeIcon fas fa-angle-double-right', title: "Speed"}),
             this.speedRange
           ),
-          jst.$div({cn: '-rangeSelect'},
+          jst.$div({cn: '-rangeSelect -rangeSize'},
             jst.$i({cn: '-rangeIcon fas fa-expand-arrows-alt', title: "Size"}),
             this.sizeRange
           ),
-          jst.$div({cn: '-rangeSelect'},
+          jst.$div({cn: '-rangeSelect -rangeRate'},
             jst.$i({cn: '-rangeIcon fas fa-history', title: "Event Rate"}),
             this.freqRange
           ),
@@ -254,9 +273,12 @@ export class Emitter extends jst.Component {
   }
 
   resize(scale, offsetX, offsetY) {
-    this.scale = scale;
-    this.offsetX = offsetX;
-    this.offsetY = offsetY;
+    super.resize(scale, offsetX, offsetY);
+    if (this.speedRange) {
+      this.speedRange.resize(this.ss(0.55), this.ss(0.12));
+      this.sizeRange.resize(this.ss(0.55), this.ss(0.12));
+      this.freqRange.resize(this.ss(0.55), this.ss(0.12));
+    }
   }
 
   toggle(e) {
@@ -269,12 +291,16 @@ export class Emitter extends jst.Component {
       this.isOn = true;
       this.fire(undefined, true);
     }
-
     this.refresh();
   }
 
   remove() {
     this.matterBlocks.forEach(block => this.world.remove(block));
+  }
+
+  // Scale Size
+  ss(size) {
+    return EMITTER_SIZE * this.scale * size;
   }
 
   addMatterBlocks() {
@@ -287,12 +313,12 @@ export class Emitter extends jst.Component {
     };
     this.matterBlocks = [];
 
-    // Two side blocks to prevent things going through the edges of the portal
-    this.matterBlocks.push(this.world.add(...this.rotateCoords(this.x + EMITTER_WIDTH/2, this.y+1), EMITTER_WIDTH, 2,  opts));
-    this.matterBlocks.push(this.world.add(...this.rotateCoords(this.x + EMITTER_WIDTH/2, this.y+EMITTER_HEIGHT-1), EMITTER_WIDTH, 2,  opts));
-    this.matterBlocks.push(this.world.add(...this.rotateCoords(this.x - EMITTER_WIDTH * 0.05, this.y+EMITTER_HEIGHT/2), EMITTER_WIDTH*0.1, EMITTER_HEIGHT*0.8,  opts));
-    this.matterBlocks.push(this.world.add(...this.rotateCoords(this.x + EMITTER_WIDTH * 1.1, this.y+EMITTER_HEIGHT*0.1 + 1), EMITTER_WIDTH*0.2, 2,  opts));
-    this.matterBlocks.push(this.world.add(...this.rotateCoords(this.x + EMITTER_WIDTH * 1.1, this.y+EMITTER_HEIGHT*0.9 - 1), EMITTER_WIDTH*0.2, 2,  opts));
+    // Add a bunch of blocks to give the emitter a structure in the physics engine
+    this.matterBlocks.push(this.world.add(...this.rotateCoords(this.x + EMITTER_SIZE/2, this.y+1), EMITTER_SIZE, 2,  opts));
+    this.matterBlocks.push(this.world.add(...this.rotateCoords(this.x + EMITTER_SIZE/2, this.y+EMITTER_SIZE-1), EMITTER_SIZE, 2,  opts));
+    this.matterBlocks.push(this.world.add(...this.rotateCoords(this.x - EMITTER_SIZE * 0.05, this.y+EMITTER_SIZE/2), EMITTER_SIZE*0.1, EMITTER_SIZE*0.8,  opts));
+    this.matterBlocks.push(this.world.add(...this.rotateCoords(this.x + EMITTER_SIZE * 1.1, this.y+EMITTER_SIZE*0.1 + 1), EMITTER_SIZE*0.2, 2,  opts));
+    this.matterBlocks.push(this.world.add(...this.rotateCoords(this.x + EMITTER_SIZE * 1.1, this.y+EMITTER_SIZE*0.9 - 1), EMITTER_SIZE*0.2, 2,  opts));
   }
 
   fire(e, repeat) {
@@ -305,10 +331,6 @@ export class Emitter extends jst.Component {
     let color = this.color;
     if (color == 'random') {
       color = (['red', 'blue', 'orange', 'green'])[Math.floor(Math.random()*4)];
-      // color = "green";
-      // if (this.eventSeq.toString().match(/^(10|11|16|23|27|39)$/)) {
-      //   color = "orange";
-      // }
     }
     let opts = {
       rotate: this.rotationRad, 
@@ -320,7 +342,7 @@ export class Emitter extends jst.Component {
       guid: (100000000*Math.random()).toFixed(0) + '-' + (100000000*Math.random()).toFixed(0)
     };
     let size = this.eventWidth/2 + this.eventWidth * this.size/20;
-    this.world.addEvent(...this.rotateCoords(this.x + EMITTER_WIDTH*1.3 - this.eventWidth/2, this.y + EMITTER_HEIGHT/2), size, size, opts);
+    this.world.addEvent(...this.rotateCoords(this.x + EMITTER_SIZE*1.3 - this.eventWidth/2, this.y + EMITTER_SIZE*0.5), size, size, opts);
 
     if (repeat && this.isOn) {
       this.world.setAnimTimeout(() => this.fire(undefined, true), (10 - this.rate) * 6);
@@ -329,7 +351,6 @@ export class Emitter extends jst.Component {
   }
 
   setColor(col) {
-    console.log("Setting color:", col)
     this.color = col;
     this.refresh();
     this.world.save();
@@ -369,8 +390,8 @@ export class Emitter extends jst.Component {
     this.x = x;
     this.y = y;
 
-    this.cx = this.x + EMITTER_WIDTH/2;
-    this.cy = this.y + EMITTER_HEIGHT/2;
+    this.cx = this.x + EMITTER_SIZE/2;
+    this.cy = this.y + EMITTER_SIZE/2;
 
     this.matterBlocks.forEach(block => this.world.remove(block));
     this.matterBlocks = [];
