@@ -3,8 +3,8 @@
 import {jst}        from 'jayesstee';
 import {Entity}     from "./entity.js";
 
-const CORNER_SIZE           = 2;
-const KNOB_WIDTH            = 3;
+const CORNER_SIZE           = 9;
+const KNOB_WIDTH            = 12;
 
 export class FixedBody extends Entity {
   constructor(world, scale, offsetX, offsetY, opts) {
@@ -13,8 +13,8 @@ export class FixedBody extends Entity {
     this.x = opts.x || 50;
     this.y = opts.y || 50;
 
-    this.width  = opts.width || 20;
-    this.height = opts.height || 20;
+    this.width  = opts.width || 100;
+    this.height = opts.height || 100;
 
     this.cx = this.x + this.width/2;
     this.cy = this.y + this.height/2;
@@ -59,8 +59,8 @@ export class FixedBody extends Entity {
       },
       knob$c: {
         position: 'absolute',
-        width$px: 3 * this.scale,
-        height$px: 3 * this.scale,
+        width$px: KNOB_WIDTH * this.scale,
+        height$px: KNOB_WIDTH * this.scale,
         borderRadius$px: '50%',
         backgroundColor: 'white',
         border$px: [1, 'solid', 'black']

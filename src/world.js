@@ -25,11 +25,11 @@ export class World extends jst.Component {
     this.timeoutSeq     = 0;
     this.timeouts       = {};
 
-    this.scale          = 4;
+    this.scale          = 1;
     this.offsetX = (window.innerWidth  - 100 * this.scale)/2;
     this.offsetY = (window.innerHeight - 100 * this.scale)/2;
     this.offsetX = 0;
-    this.offsetY = 0;
+    this.offsetY = 400;
 
 
     let state = this.load();
@@ -44,7 +44,7 @@ export class World extends jst.Component {
       };
     }
     this.messagingOpts = {
-      host: 'ws://192.168.134.44:8000',
+      host: 'ws://192.168.134.37:8000',
       username: 'default',
       password: 'default'
     };
@@ -110,8 +110,9 @@ export class World extends jst.Component {
                       }
                     },
       this.toolBar,
-      this.matter,
-      this.objects
+      //this.matter,
+      this.objects,
+      Object.values(this.events)
     );
   }
 
@@ -128,6 +129,9 @@ export class World extends jst.Component {
       }
       this.refresh();
     });
+    if (this.events) {
+      Object.values(this.events).forEach(event => event.resize(this.scale, this.offsetX, this.offsetY));
+    }
 
   }
 
@@ -143,7 +147,7 @@ export class World extends jst.Component {
       this.objects.push(new Portal(this, this.scale, this.offsetX, this.offsetY, {x: 10, y: 10}));
     }
     else if (type == 'fixed-body') {
-      this.objects.push(new FixedBody(this, this.scale, this.offsetX, this.offsetY, {x: 10, y: 10, width: 10, height: 10}));
+      this.objects.push(new FixedBody(this, this.scale, this.offsetX, this.offsetY, {x: 100, y: 100, width: 100, height: 100}));
     }
     else if (type == 'emitter') {
       this.objects.push(new Emitter(this, this.scale, this.offsetX, this.offsetY, {x: 10, y: 10}));
@@ -155,6 +159,7 @@ export class World extends jst.Component {
 }
 
   add(x, y, w, h, opts) {
+    return this.matter.addElements([[x,y,w,h,opts]]);
     return (this.matter.addElements([
       this.adjust(x, y, w, h).concat(opts),
     ]))[0];
@@ -162,28 +167,20 @@ export class World extends jst.Component {
 
   addEvent(x, y, w, h, opts) {
     if (this.events[opts.guid]) {
-      // Don't allow dups
+      // Don't allow dups - TODO - allow config of this
       return;
     }
 
     opts.cornerRadius = 5;
-    let event      = new Event(this, this.scale, this.offsetY, this.offsetY, Object.assign({x: x, y: y, width: w, height: h}, opts));
-    let matterOpts = Object.assign({renderObj: event}, opts);
-
+    let event      = new Event(this, this.scale, this.offsetX, this.offsetY, Object.assign({x: x, y: y, width: w, height: h}, opts));
     this.events[opts.guid] = event;
-    opts.restitution = 0.01;
-
-    return (this.matter.addElements([
-      this.adjust(x, y, w, h).concat(matterOpts),
-    ]))[0];
-
+    this.refresh();
   }
 
   removeEvent(event) {
-    if (event.body) {
-      this.remove(event.body);
-    }
+    event.remove();
     delete(this.events[event.guid]);
+    this.refresh();
   }
 
   removeAllEvents() {
@@ -195,6 +192,8 @@ export class World extends jst.Component {
         obj.clearEventQueue();
       }
     });
+
+    this.refresh();
 
   }
 
@@ -376,9 +375,15 @@ export class World extends jst.Component {
         this.offsetY -= (e.offsetY * (1/MOUSE_WHEEL_SCALE_FACTOR - 1));
       }
 
-      this.resize();
+    }
+    else if (e.shiftKey) {
+      this.offsetX -= e.deltaY/5;
+    }
+    else {
+      this.offsetY -= e.deltaY/5;
     }
     
+    this.resize();
     e.preventDefault();
     e.stopPropagation();
 
@@ -409,6 +414,29 @@ export class World extends jst.Component {
       items[2] * this.scale,
       items[3] * this.scale,
     ];
+  }
+
+  scaleAndMove(coords) {
+    return [
+      coords[0] * this.scale + this.offsetX,
+      coords[1] * this.scale + this.offsetY
+    ];
+  }
+
+  scaleAndMoveX(x) {
+    return x * this.scale + this.offsetX;
+  }
+
+  scaleAndMoveY(y) {
+    return y * this.scale + this.offsetY;
+  }
+
+  scale(v) {
+    return v * this.scale;
+  }
+
+  reverseScale(v) {
+    return v / this.scale;
   }
 
   // For the accelerometer on mobile devices

@@ -21,6 +21,8 @@ export class Entity extends jst.Component {
 
 
   resize(scale, offsetX, offsetY) {
+    console.log("offsetX:", offsetX)
+
     this.scale = scale;
     this.offsetX = offsetX;
     this.offsetY = offsetY;

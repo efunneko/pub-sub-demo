@@ -5,7 +5,7 @@ import {ClickableRange}     from './widgets';
 import {EventColors}        from './event';
 import {Entity}             from './entity'
 
-const EMITTER_SIZE          = 20;
+const EMITTER_SIZE          = 65;
 
 export class Emitter extends Entity {
   constructor(world, scale, offsetX, offsetY, opts) {
@@ -49,8 +49,8 @@ export class Emitter extends Entity {
   cssInstance() {
     return {
       emitter$c: {
-        top$px: this.y * this.scale + this.offsetY,
-        left$px: this.x * this.scale + this.offsetX,
+        top$px:  this.world.scaleAndMoveY(this.y),
+        left$px: this.world.scaleAndMoveX(this.x),
         transform: jst.rotate(jst.rad(this.rotationRad)),
         backgroundColor: this.ringColor,
       },
@@ -314,13 +314,14 @@ export class Emitter extends Entity {
     this.matterBlocks = [];
 
     // Add a bunch of blocks to give the emitter a structure in the physics engine
-    this.matterBlocks.push(this.world.add(...this.rotateCoords(this.x + EMITTER_SIZE/2, this.y+1), EMITTER_SIZE, 2,  opts));
-    this.matterBlocks.push(this.world.add(...this.rotateCoords(this.x + EMITTER_SIZE/2, this.y+EMITTER_SIZE-1), EMITTER_SIZE, 2,  opts));
-    this.matterBlocks.push(this.world.add(...this.rotateCoords(this.x - EMITTER_SIZE * 0.05, this.y+EMITTER_SIZE/2), EMITTER_SIZE*0.1, EMITTER_SIZE*0.8,  opts));
-    this.matterBlocks.push(this.world.add(...this.rotateCoords(this.x + EMITTER_SIZE * 1.1, this.y+EMITTER_SIZE*0.1 + 1), EMITTER_SIZE*0.2, 2,  opts));
-    this.matterBlocks.push(this.world.add(...this.rotateCoords(this.x + EMITTER_SIZE * 1.1, this.y+EMITTER_SIZE*0.9 - 1), EMITTER_SIZE*0.2, 2,  opts));
+    this.matterBlocks.push(this.world.add(...this.rotateCoords(this.x + EMITTER_SIZE * 0.5,  this.y+1),                    EMITTER_SIZE, 2,  opts));
+    this.matterBlocks.push(this.world.add(...this.rotateCoords(this.x + EMITTER_SIZE * 0.5,  this.y+EMITTER_SIZE-1),       EMITTER_SIZE, 2,  opts));
+    this.matterBlocks.push(this.world.add(...this.rotateCoords(this.x - EMITTER_SIZE * 0.05, this.y+EMITTER_SIZE/2),       EMITTER_SIZE*0.1, EMITTER_SIZE*0.8,  opts));
+    this.matterBlocks.push(this.world.add(...this.rotateCoords(this.x + EMITTER_SIZE * 1.1,  this.y+EMITTER_SIZE*0.1 + 1), EMITTER_SIZE*0.2, 2,  opts));
+    this.matterBlocks.push(this.world.add(...this.rotateCoords(this.x + EMITTER_SIZE * 1.1,  this.y+EMITTER_SIZE*0.9 - 1), EMITTER_SIZE*0.2, 2,  opts));
   }
 
+  // Send an event into the world
   fire(e, repeat) {
     if (e) {
       e.stopPropagation();
@@ -341,7 +342,7 @@ export class Emitter extends Entity {
       color: color,
       guid: (100000000*Math.random()).toFixed(0) + '-' + (100000000*Math.random()).toFixed(0)
     };
-    let size = this.eventWidth/2 + this.eventWidth * this.size/20;
+    let size = this.eventWidth/2 + this.eventWidth * this.size/2;
     this.world.addEvent(...this.rotateCoords(this.x + EMITTER_SIZE*1.3 - this.eventWidth/2, this.y + EMITTER_SIZE*0.5), size, size, opts);
 
     if (repeat && this.isOn) {
@@ -418,16 +419,16 @@ export class Emitter extends Entity {
   }
 
   gripMove(e) {
-    let dx = (e.clientX - this.clickStart.ex)/this.scale;
-    let dy = (e.clientY - this.clickStart.ey)/this.scale;
+    let dx = this.world.reverseScale(e.clientX - this.clickStart.ex);
+    let dy = this.world.reverseScale(e.clientY - this.clickStart.ey);
     this.moveTo(this.clickStart.x + dx, this.clickStart.y + dy, false);
   }
 
   gripUp(e) {
     this.controlUp   = null;
     this.controlMove = null;
-    let dx = (e.clientX - this.clickStart.ex)/this.scale;
-    let dy = (e.clientY - this.clickStart.ey)/this.scale;
+    let dx = this.world.reverseScale(e.clientX - this.clickStart.ex);
+    let dy = this.world.reverseScale(e.clientY - this.clickStart.ey);
     this.moveTo(this.clickStart.x + dx, this.clickStart.y + dy, true);
     this.world.save();
   }
@@ -447,8 +448,8 @@ export class Emitter extends Entity {
 
   rotateMove(e, final) {
     // Find the angle from the pointer location to the center point
-    let dx = this.cx*this.scale+this.offsetX - e.clientX;
-    let dy = this.cy*this.scale+this.offsetY - e.clientY;
+    let dx = this.world.scaleAndMoveX(this.cx) - e.clientX;
+    let dy = this.world.scaleAndMoveY(this.cy) - e.clientY;
     let angle = Math.atan(dy/dx);
     if (dx < 0) {
       angle += Math.PI;

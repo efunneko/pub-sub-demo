@@ -1,8 +1,9 @@
 // portal.js - one end of an event portal
 
 import {jst} from 'jayesstee';
+import { Entity } from './entity';
 
-const PORTAL_WIDTH          = 40;
+const PORTAL_WIDTH          = 120;
 const PORTAL_SQUISH         = 3;
 const PORTAL_SQUISH2        = PORTAL_SQUISH * 2;
 const PORTAL_SQUISH_INNER   = PORTAL_SQUISH + 0.1;
@@ -16,7 +17,7 @@ const colorToCode = {
   black: '#222'
 }
 
-export class Portal extends jst.Component {
+export class Portal extends Entity {
   constructor(world, scale, offsetX, offsetY, opts) {
     super();
 
@@ -80,7 +81,7 @@ export class Portal extends jst.Component {
         top$px: this.y * this.scale + this.offsetY,
         left$px: this.x * this.scale + this.offsetX,
         transform: jst.rotate(jst.rad(this.rotationRad)),
-        boxShadow$px: [0, 0, 1 * this.scale, 2 * this.scale, this.ringColor],
+        boxShadow$px: [0, 0, 3 * this.scale, 6 * this.scale, this.ringColor],
         backgroundColor: this.ringColor,
         clipPath: 'polygon(-250% -50%, 31% -50%, 31% 150%, -250% 150%)'
       },
@@ -88,13 +89,13 @@ export class Portal extends jst.Component {
         background: `radial-gradient(closest-side, black 0%, black 70%, ${this.ringColor} 100%)`,
       },
       inset$c: {
-        boxShadow$px: [0, 0, 1 * this.scale, 2 * this.scale, this.ringColor, 'inset'],
+        boxShadow$px: [0, 0, 3 * this.scale, 6 * this.scale, this.ringColor, 'inset'],
       },
       frontPortal$c: {
         top$px: this.y * this.scale + this.offsetY,
         left$px: this.x * this.scale + this.offsetX,
         transform: jst.rotate(jst.rad(this.rotationRad)),
-        boxShadow$px: [0, 0, 1 * this.scale, 2 * this.scale, this.ringColor],
+        boxShadow$px: [0, 0, 3 * this.scale, 6 * this.scale, this.ringColor],
         backgroundColor: this.ringColor,
         clipPath: 'polygon(550% -50%, 30% -50%, 30% 550%, 550% 550%)'
       },
@@ -102,7 +103,7 @@ export class Portal extends jst.Component {
         background: `radial-gradient(closest-side, black 0%, black 70%, ${this.ringColor} 100%)`,
       },
       frontInset$c: {
-        boxShadow$px: [0, 0, 1 * this.scale, 2 * this.scale, this.ringColor, 'inset'],
+        boxShadow$px: [0, 0, 3 * this.scale, 6 * this.scale, this.ringColor, 'inset'],
       },
       id$c: {
         transform: jst.rotate(jst.rad(-this.rotationRad))
@@ -219,7 +220,7 @@ export class Portal extends jst.Component {
         backgroundColor: 'white',
         color: '#222',
         border$px: [1, 'solid', 'black'],
-        boxShadow$px: [0, 1 * this.scale, 3 * this.scale, jst.rgba(0,0,0,0.3)],
+        boxShadow$px: [0, 3 * this.scale, 9 * this.scale, jst.rgba(0,0,0,0.3)],
         zIndex: 5
       },
       subTitle$c: {
@@ -248,7 +249,7 @@ export class Portal extends jst.Component {
         position: 'absolute',
         top$px: (PORTAL_WIDTH * -0.2) * this.scale,
         left$px: (PORTAL_WIDTH * 0.2) * this.scale,
-        fontSize$px: 4 * this.scale,
+        fontSize$px: PORTAL_WIDTH * 0.12 * this.scale,
         fontWeight: 'bold',
         borderRadius$px: 2 * this.scale,
         backgroundColor: 'white',
@@ -260,7 +261,7 @@ export class Portal extends jst.Component {
         position: 'absolute',
         bottom$px: (PORTAL_WIDTH * -0.2) * this.scale,
         left$px: (PORTAL_WIDTH * 0.2) * this.scale,
-        fontSize$px: 4 * this.scale,
+        fontSize$px: PORTAL_WIDTH * 0.12 * this.scale,
         fontWeight: 'bold',
         borderRadius$px: 2 * this.scale,
         backgroundColor: 'white',
@@ -352,12 +353,7 @@ export class Portal extends jst.Component {
     ]
   }
 
-  resize(scale, offsetX, offsetY) {
-    this.scale = scale;
-    this.offsetX = offsetX;
-    this.offsetY = offsetY;
-  }
-
+  
   remove() {
     this.matterBlocks.forEach(block => this.world.remove(block));
   }

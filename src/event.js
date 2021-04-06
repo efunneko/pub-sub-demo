@@ -15,6 +15,7 @@ export class Event extends jst.Component {
     super();
 
     this.world        = world;
+    this.opts         = opts;
 
     this.width        = (opts.width  || 20);
     this.height       = (opts.height || 20);
@@ -39,9 +40,10 @@ export class Event extends jst.Component {
     this.isEvent      = true;
     this.type         = "square";      
 
+    console.log("Got offsetX:", offsetX)
     this.resize(scale, offsetX, offsetY);
 
-   //this.addMatterBlock();
+    this.addMatterBlocks();
 
   }
 
@@ -53,9 +55,9 @@ export class Event extends jst.Component {
         position: 'fixed',
         textAlign: 'center',
         verticalAlign: 'middle',
-        zIndex: 2,
+        zIndex: 1,
         fontWeight: 'bold',
-        fontSize$px: 4 * this.scale
+        fontSize$px: 12 * this.scale
       }
     };
   }
@@ -66,31 +68,38 @@ export class Event extends jst.Component {
       body$c: {
         width$px: this.width * this.scale,
         height$px: this.height * this.scale,
-        lineHeight$px: this.height,
+        lineHeight$px: this.height * this.scale,
         transform: jst.rotate(jst.rad(this.angle)),
         left$px: this.x * this.scale + this.offsetX,
         top$px: this.y * this.scale + this.offsetY,
-        borderRadius$px: this.cornerRadius || 0,
+        borderRadius$px: this.cornerRadius * this.scale || 0,
         backgroundColor:  EventColors[this.color],
       },
     }
   }
 
   render() {
-    console.log("Rendering:", this.display)
+    //console.log("Event render:", this.angle, this.x * this.scale + this.offsetX, this.y * this.scale + this.offsetY)
     return this.display && 
       jst.$div({cn: '-body --body', 
                 ref: 'myDiv',
                 events: {click: () => this.showTopic()},
                 // Note that we are using style for the things that are changing very frequently
                 // This will let us more efficiently move the div around
-                style: `left: ${this.x * this.scale + this.offsetX}px; top: ${this.y * this.scale + this.offsetY}px; transform: rotate(${this.angle}rad)`}, this.text);
+                style: `left: ${this.x * this.scale + this.offsetX}px; top: ${this.y * this.scale + this.offsetY}px; transform: rotate(${this.angle}rad)`}, 
+                this.text);
   }
 
   resize(scale, offsetX, offsetY) {
     this.scale = scale;
     this.offsetX = offsetX;
     this.offsetY = offsetY;
+    /*
+    if (this.myDiv && this.myDiv.el) {
+      this.myDiv.el.style = `left: ${this.x * this.scale + this.offsetX}px; top: ${this.y * this.scale + this.offsetY}px; transform: rotate(${this.angle}rad)`;
+    }
+    */
+
     this.refresh();
   }
 
@@ -142,17 +151,32 @@ export class Event extends jst.Component {
   }
 
   // TODO - not currently used - the world creates its own right now
-  addMatterBlock() {
+  addMatterBlocks() {
     // Create a matter block that is the same size as this
     this.matterBlocks = [];
-    let opts = {
-      rotate: this.rotationRad, 
+    let opts = Object.assign(this.opts, {
+      rotate: this.angle, 
       noRender: true,
-    };
+      renderObj: this,
+      restitution: 0.01,
+    });
 
     // Single rectangle
-    this.matterBlocks.push(this.world.add(...this.rotateCoords(this.x + this.width/2, this.y + this.height/2), this.width, this.height, opts));
+    console.log("Adding block:", this.offsetX, this.x, this.y, this.width, this.height, opts, this.angle)
+    let x = this.x + this.halfWidth;
+    let y = this.y + this.halfHeight;
+    this.matterBlocks.push(this.world.add(x, y, this.width, this.height, opts));
+    /*
+    return (this.matter.addElements([
+      this.adjust(x, y, w, h).concat(matterOpts),
+    ]))[0];
+*/
 
+
+  }
+
+  remove() {
+    this.matterBlocks.forEach(block => this.world.remove(block));
   }
 
   // Called from Matter to update to new location and orientation
@@ -164,6 +188,7 @@ export class Event extends jst.Component {
       needsRefresh = true;
     }
     if (body.position.x != body.positionPrev.x || body.position.y != body.positionPrev.y) {
+      //console.log("update", body.position.x, this.halfWidth)
       this.x = body.position.x - this.halfWidth;
       this.y = body.position.y - this.halfHeight;
       needsRefresh = true;
@@ -174,17 +199,20 @@ export class Event extends jst.Component {
       this.refresh({skipCss: true});
     }
 
+    //console.log("update:", this.x, this.y, this.angle)
     if (needsRefresh) {
       // This will just change the local style on the object - this is more efficient than 
       // re-rendering the whole thing again
-      this.myDiv.el.style = `left: ${this.x}px; top: ${this.y}px; transform: rotate(${this.angle}rad)`;
+
+      this.myDiv.el.style = `left: ${this.x * this.scale + this.offsetX}px; top: ${this.y * this.scale + this.offsetY}px; transform: rotate(${this.angle}rad)`;
+      this.refresh();
     }
 
   }
 
   rotateCoords(x, y, reverse, center, angle) {
     let cx, cy;
-    let rot = typeof(angle) != undefined ? angle : this.rotationRad;
+    let rot = typeof(angle) != undefined ? angle : this.angle;
 
     if (center) {
       cx = center[0];

@@ -4,7 +4,7 @@ import {jst}                   from "jayesstee";
 import {Entity}                from "./entity.js";
 import {Images}                from "./images.js";
 
-const BROKER_SIZE = 30;
+const BROKER_SIZE = 100;
 
 export class Broker extends Entity {
   constructor(world, scale, offsetX, offsetY, opts) {
@@ -23,7 +23,7 @@ export class Broker extends Entity {
 
     this.baseSize = BROKER_SIZE;
 
-    this.addMatterBlock();
+    this.addMatterBlocks();
 
   }
 
@@ -100,24 +100,17 @@ export class Broker extends Entity {
       this.type == 'mqtt' ? this.renderMqttLogo() : this.renderSolaceLogo(),
       jst.$div({cn: '-host'}, this.connectOpts.hostname),
       jst.if(this.showControls) &&
-      jst.$div({cn: '-controls --controls'},
-        jst.$div({cn: '--gripKnob -knob', events: {pointerdown: e => this.gripDown(e)}})
-      )
+        jst.$div({cn: '-controls --controls'},
+          jst.$div({cn: '--gripKnob -knob', events: {pointerdown: e => this.gripDown(e)}})
+        )
     );
-  }
-
-  resize(scale, offsetX, offsetY) {
-    this.scale = scale;
-    this.offsetX = offsetX;
-    this.offsetY = offsetY;
-    this.refresh();
   }
 
   remove() {
     this.matterBlocks.forEach(block => this.world.remove(block));
   }
 
-  addMatterBlock() {
+  addMatterBlocks() {
     /*
     this.matterBlocks = [];
     let opts = {
