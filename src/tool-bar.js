@@ -48,6 +48,7 @@ export class ToolBar extends jst.Component {
         jst.$div({cn: '-button', events: {click: e => this.addItem('emitter')}},    "Event Emitter"),
         jst.$div({cn: '-button', events: {click: e => this.addItem('portal')}},     "Portal"),
         jst.$div({cn: '-button', events: {click: e => this.addItem('fixed-body')}}, "Rectangle"),
+        jst.$div({cn: '-button', events: {click: e => this.addItem('broker')}},     "Broker"),
         jst.$div({cn: '-button', events: {click: e => this.removeAllEvents()}},     "Remove All Events"),
         jst.$div({cn: '-button', events: {click: e => this.removeSelected()}},      "Remove Selected"),
       )

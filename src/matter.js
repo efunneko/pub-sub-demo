@@ -50,6 +50,12 @@ export class Matter extends jst.Component {
   initEngine() {
   
     this.engine  = Engine.create();
+
+    // Setting this to true will help performance, but it stops dynamic changes
+    // when fixed-bodies are moved around
+    // Possibly could force this to true when they are moved...
+    this.engine.enableSleeping = false;
+
     Events.on(this.engine, "collisionStart", (e) => this.collision(e));
 
     // Start the renderer
@@ -73,7 +79,6 @@ export class Matter extends jst.Component {
       if (opts.cornerRadius) {
         opts.chamfer = {radius: opts.cornerRadius};
       }
-      console.log("Adding block:", item[0], item[1], opts.chamfer)
       let box = Bodies.rectangle(item[0], item[1], item[2], item[3], opts);
       if (opts.renderObj) {
         this.renderBodies[box.id] = opts.renderObj;

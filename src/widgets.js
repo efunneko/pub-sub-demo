@@ -13,7 +13,6 @@ export class ClickableRange extends jst.Component {
     this.height      = opts.height || 1.7;
     this.borderWidth = opts.borderWidth || 0.25;
     this.events      = opts.events;
-    console.log("CR:", this. height)
     //this.icon        = opts.icon;
 
   }
@@ -63,7 +62,6 @@ export class ClickableRange extends jst.Component {
   }
 
   render() {
-    console.log("clickrange", this.scale, this.width)
     return jst.$div({cn: '--full -full'},
       jst.$div({cn: '--range -range'},
         new Array(this.numButtons).fill(0).map((item, i) => 

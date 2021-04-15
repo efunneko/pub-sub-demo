@@ -26,10 +26,8 @@ export class World extends jst.Component {
     this.timeouts       = {};
 
     this.scale          = 1;
-    this.offsetX = (window.innerWidth  - 100 * this.scale)/2;
-    this.offsetY = (window.innerHeight - 100 * this.scale)/2;
-    this.offsetX = 0;
-    this.offsetY = 400;
+    this.offsetX        = 0;
+    this.offsetY        = 400;
 
 
     let state = this.load();
@@ -55,6 +53,9 @@ export class World extends jst.Component {
     this.objects = [];
 
     if (state) {
+      this.scale   = state.scale || 1;
+      this.offsetX = state.offsetX || 0;
+      this.offsetY = state.offsetY || 0;
       state.objects.forEach(obj => {
         if (obj.type == 'portal') {
           this.objects.push(new Portal(this, this.scale, this.offsetX, this.offsetY, obj));
@@ -65,22 +66,25 @@ export class World extends jst.Component {
         else if (obj.type == 'emitter') {
           this.objects.push(new Emitter(this, this.scale, this.offsetX, this.offsetY, obj));
         }
+        else if (obj.type == 'broker') {
+          this.objects.push(new Broker(this, this.scale, this.offsetX, this.offsetY, obj));
+        }
       })
     }
     else {
       this.objects.push(new Portal(this, this.scale, this.offsetX, this.offsetY,
-        {color: "orange", x: 30, y: 7, id: 1}));
-      this.objects.push(new Portal(this, this.scale, this.offsetX, this.offsetY,
-        {color: "blue", x: 20, y: 50, rotation: 50, id: 1}));
-      this.objects.push(new FixedBody(this, this.scale, this.offsetX, this.offsetY,
-        {x: 0, y: 10, width: 100, height: 10, rotation: 0})); 
-      this.objects.push(new Emitter(this, this.scale, this.offsetX, this.offsetY,
-        {x: 50, y: 50, text: "HI"})); 
+        {color: "orange", x: 200, y: -100, id: 1}));
+      this.objects.push(new Broker(this, this.scale, this.offsetX, this.offsetY,
+        {x: 400, y: -100}));
     }
-    this.events = {};
 
-    this.objects.push(new Broker(this, this.scale, this.offsetX, this.offsetY,
-      {x: 50, y: 50, text: "HI"})); 
+    this.objects.forEach(obj => {
+      if (obj.init) {
+        obj.init();
+      }
+    })
+
+    this.events = {};
 
     document.addEventListener("keydown", e => this.keyDown(e));
 
@@ -117,12 +121,6 @@ export class World extends jst.Component {
   }
 
   resize() {
-    /*
-    this.scale   = Math.min(window.innerWidth, window.innerHeight)/120;
-    this.scale   = 4;
-    this.offsetX = (window.innerWidth  - 100 * this.scale)/2;
-    this.offsetY = (window.innerHeight - 100 * this.scale)/2;
-    */
     this.objects.forEach(obj => {
       if (obj.resize) {
         obj.resize(this.scale, this.offsetX, this.offsetY);
@@ -135,26 +133,69 @@ export class World extends jst.Component {
 
   }
 
-  createConnection(opts) {
-    let combinedOpts = Object.assign(this.messagingOpts, opts);
-    let messaging    = new Messaging(combinedOpts);
-    messaging.connect();
-    return messaging;
+  createConnection(brokerName, opts) {
+    console.log("connecting to:", brokerName)
+    if (brokerName) {
+      let broker;
+      console.log("finding:", brokerName)
+      this.objects.forEach(obj => {
+        console.log("Checking", obj.type, obj.name)
+        if (obj.type == 'broker' && obj.name == brokerName) {
+          console.log("Found broker:", broker)
+          broker = obj;
+        }
+      })
+
+      if (broker) {
+        let combinedOpts = Object.assign(broker.getConnectionOpts(), opts);
+        let messaging    = new Messaging(combinedOpts);
+        messaging.connect();
+        return messaging;
+      }
+      else {
+        console.log("Failed to find broker with name:", brokerName)
+      }
+    }
+
+    console.log("Portal needs to configure a broker");
+  }
+
+  handleBrokerConfigChange(oldName, broker) {
+    // Find all the portals using this broker
+    this.objects.forEach(obj => {
+      if (obj.type == 'portal' && (!oldName || obj.brokerName == oldName)) {
+        obj.setBrokerName(broker.name);
+        if (broker.url) {
+          obj.reconnectToBroker();
+        }
+      }
+    })
+
   }
 
   addItem(type) {
+    let obj;
     if (type == 'portal') {
-      this.objects.push(new Portal(this, this.scale, this.offsetX, this.offsetY, {x: 10, y: 10}));
+      obj = new Portal(this, this.scale, this.offsetX, this.offsetY, {x: 10, y: 10});
     }
     else if (type == 'fixed-body') {
-      this.objects.push(new FixedBody(this, this.scale, this.offsetX, this.offsetY, {x: 100, y: 100, width: 100, height: 100}));
+      obj = new FixedBody(this, this.scale, this.offsetX, this.offsetY, {x: 100, y: 100, width: 100, height: 100});
     }
     else if (type == 'emitter') {
-      this.objects.push(new Emitter(this, this.scale, this.offsetX, this.offsetY, {x: 10, y: 10}));
+      obj = new Emitter(this, this.scale, this.offsetX, this.offsetY, {x: 10, y: 10});
     }
     else if (type == 'text') {
-      this.objects.push(new TextBlock(this, this.scale, this.offsetX, this.offsetY, {x: 10, y: 10, text: 'Change me'}));
+      obj = new TextBlock(this, this.scale, this.offsetX, this.offsetY, {x: 10, y: 10, text: 'Change me'});
     }
+    else if (type == 'broker') {
+      obj = new Broker(this, this.scale, this.offsetX, this.offsetY, {x: 50, y: 50});
+    }
+
+    this.objects.push(obj);
+    if (obj.init) {
+      obj.init();
+    }
+
     this.refresh();
 }
 
@@ -238,6 +279,7 @@ export class World extends jst.Component {
   }
 
   entitySelected(entity) {
+    this.panning = false;
     if (this.selectedEntity) {
       this.selectedEntity.unselect();
     }
@@ -265,11 +307,15 @@ export class World extends jst.Component {
   save() {
     let data = {
       objects: [],
+      scale: this.scale,
+      offsetX: this.offsetX,
+      offsetY: this.offsetY,
       messagingOpts: this.messagingOpts
     };
     this.objects.forEach(obj => {
       data.objects.push(obj.serialize());
     });
+
 
     if (window.localStorage) {
       window.localStorage.setItem('state', JSON.stringify(data));
@@ -291,6 +337,17 @@ export class World extends jst.Component {
     }
   }
 
+  getBrokerNames() {
+    let brokerNames = [];
+    this.objects.forEach(obj => {
+      if (obj.type == 'broker') {
+        if (obj.name) {
+          brokerNames.push(obj.name);
+        }
+      }
+    })
+    return brokerNames;
+  }
 
   // Event handling
 
@@ -304,7 +361,6 @@ export class World extends jst.Component {
       if (this.panning) {
         this.panState.dx = this.panState.clientX - e.clientX;
         this.panState.dy = this.panState.clientY - e.clientY;
-        console.log("sched?", this.panState.scheduled)
         if (!this.panState.scheduled) {
           requestAnimationFrame(() => this.doPan());
         }
@@ -317,6 +373,7 @@ export class World extends jst.Component {
     this.offsetX            = this.panState.offsetX - this.panState.dx;
     this.offsetY            = this.panState.offsetY - this.panState.dy;
     this.resize();
+    this.save();
   }
 
   pointerUp(e) {
@@ -326,7 +383,7 @@ export class World extends jst.Component {
     this.panning = false;
     if (this.selectedEntity && this.selectedEntity.pointerUp) {
       this.selectedEntity.pointerUp(e);
-    }
+e    }
   }
 
   pointerDown(e) {
@@ -361,7 +418,6 @@ export class World extends jst.Component {
   mouseWheel(e) {
     if (e.ctrlKey) {
       // Zoom
-      console.log("offsets", this.offsetX, this.offsetY, this.scale)
 
       if (e.deltaY < 0) {
         this.scale *= MOUSE_WHEEL_SCALE_FACTOR;
@@ -384,6 +440,7 @@ export class World extends jst.Component {
     }
     
     this.resize();
+    this.save();
     e.preventDefault();
     e.stopPropagation();
 

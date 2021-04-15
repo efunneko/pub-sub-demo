@@ -40,7 +40,6 @@ export class Event extends jst.Component {
     this.isEvent      = true;
     this.type         = "square";      
 
-    console.log("Got offsetX:", offsetX)
     this.resize(scale, offsetX, offsetY);
 
     this.addMatterBlocks();
@@ -123,10 +122,10 @@ export class Event extends jst.Component {
       frictionAir:     this.body.frictionAir,
       angle:           this.body.angle,
       angularVelocity: this.body.angularVelocity,
-      velocity:        {x: (vx/this.scale).toFixed(4), y: (vy/this.scale).toFixed(4)},
+      velocity:        {x: (vx).toFixed(4), y: (vy).toFixed(4)},
       color:           this.color,
-      width:           this.width/this.scale,
-      height:          this.height/this.scale,
+      width:           this.width,
+      height:          this.height,
       cornerRadius:    this.cornerRadius,
       id:              this.id,
       guid:            this.guid
@@ -162,7 +161,7 @@ export class Event extends jst.Component {
     });
 
     // Single rectangle
-    console.log("Adding block:", this.offsetX, this.x, this.y, this.width, this.height, opts, this.angle)
+    //console.log("Adding block:", this.offsetX, this.x, this.y, this.width, this.height, opts, this.angle)
     let x = this.x + this.halfWidth;
     let y = this.y + this.halfHeight;
     this.matterBlocks.push(this.world.add(x, y, this.width, this.height, opts));

@@ -342,7 +342,7 @@ export class Emitter extends Entity {
       color: color,
       guid: (100000000*Math.random()).toFixed(0) + '-' + (100000000*Math.random()).toFixed(0)
     };
-    let size = this.eventWidth/2 + this.eventWidth * this.size/2;
+    let size = this.eventWidth*1.5 + this.eventWidth * this.size/4;
     this.world.addEvent(...this.rotateCoords(this.x + EMITTER_SIZE*1.3 - this.eventWidth/2, this.y + EMITTER_SIZE*0.5), size, size, opts);
 
     if (repeat && this.isOn) {

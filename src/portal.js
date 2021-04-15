@@ -1,7 +1,8 @@
 // portal.js - one end of an event portal
 
 import {jst} from 'jayesstee';
-import { Entity } from './entity';
+import {Entity} from './entity';
+import {utils} from './utils';
 
 const PORTAL_WIDTH          = 120;
 const PORTAL_SQUISH         = 3;
@@ -25,6 +26,7 @@ export class Portal extends Entity {
     
     this.world = world;
 
+    this.initOpts = Object.assign({}, opts);
     this.id = opts.id || 1;
 
     this.x = opts.x || 50;
@@ -38,6 +40,7 @@ export class Portal extends Entity {
     this.color       = opts.color || "orange"
     this.ringColor   = colorToCode[this.color];
     this.portalColor = opts.portalColor || '#999';
+    this.brokerName  = opts.brokerName;
 
     this.showControls = false;
     this.deleteActive = true;
@@ -57,15 +60,20 @@ export class Portal extends Entity {
 
     this.addMatterBlocks();
 
-    this.connectToBroker();
+  }
 
-    if (!opts.subscriptions) {
+  // Called after everything is created
+  init() {
+    if (this.brokerName) {
+      this.connectToBroker();
+    }
+
+    if (!this.initOpts.subscriptions) {
       this.addStandardSubscriptions();
     }
     else {
-      opts.subscriptions.forEach(sub => this.addMessagingSubscription(sub));
+      this.initOpts.subscriptions.forEach(sub => this.addMessagingSubscription(sub));
     }
-
 
   }
 
@@ -214,7 +222,7 @@ export class Portal extends Entity {
       },
       settingPanel$c: {
         position: 'absolute',
-        fontSize$px: PORTAL_WIDTH * 0.08 * this.scale,
+        fontSize$px: PORTAL_WIDTH * 0.10 * this.scale,
         padding$px: 1 * this.scale,
         borderRadius$px: '5%',
         backgroundColor: 'white',
@@ -315,11 +323,18 @@ export class Portal extends Entity {
         jst.if(this.showControls) &&
           jst.$div({cn: '-controls --controls'},
             jst.$div({cn: '-gripKnob -knob', events: {pointerdown: e => this.gripDown(e)}}),
-            jst.$div({cn: '-settings', events: {click: e => this.openSettings(e)}}, jst.$i({cn: 'fas fa-cog', events: {click: e => console.log("clicked")}}))
+            jst.$div({cn: '-settings', events: {
+                click: e => this.openSettings(e),
+                pointerdown: e => utils.stopEvent(e)
+              }}, 
+              jst.$i({cn: 'fas fa-cog', events: {
+                click: e => console.log("clicked"),
+                pointerdown: e => utils.stopEvent(e)
+              }}))
           ),
       ),
       jst.if(this.showSettings) &&
-        jst.$div({cn: '-settingPanel --settingPanel', events: {click: e => {e.preventDefault(); e.stopPropagation()}}},
+        jst.$div({cn: '-settingPanel --settingPanel', events: {click: e => utils.noProp(e), pointerdown: e => utils.noProp(e)}},
           jst.$div({cn: '-settingsTop'},
             jst.$div({cn: '-settingsTitle'}, "Portal Configuration"),
             jst.$div({cn: '-textInput'},
@@ -329,6 +344,14 @@ export class Portal extends Entity {
             jst.$div({cn: '-textInput'},
               jst.$div({cn: '-inputLabel'}, "Portal Name"),
               jst.$div({cn: '-inputDiv'}, jst.$input({cn: '-input -portalNameInput', value: this.name, ref: 'portalNameInput'})),
+            ),
+            jst.$div({cn: '-textInput'},
+              jst.$div({cn: '-inputLabel'}, "Broker To Connect To"),
+              jst.$div({cn: '-inputDiv'}, 
+                jst.$select({ref: 'brokerNameSelect'},                
+                  this.brokerNames.map(bn => jst.$option({value: bn, properties: [this.brokerName == bn ? 'selected':undefined]}, bn))
+                )
+              )
             ),
             jst.$div({cn: '-colorSelect'},
               jst.$div({cn: '-inputLabel'}, "Portal Type"),
@@ -387,28 +410,42 @@ export class Portal extends Entity {
 
     let sub = this.getStandardSubscription();
 
-    let subId = this.messaging.subscribe(1, sub, (topic, msg, data) => this.rxMessage(topic, msg, data));
-
-    this.subIds[sub] = subId;
+    if (this.messaging) {
+      let subId = this.messaging.subscribe(1, sub, (topic, msg, data) => this.rxMessage(topic, msg, data));
+      this.subIds[sub] = subId;
+    }
+    else {
+      this.subIds[sub] = undefined;
+    }
 
   }
 
   openSettings(e) {
     e.stopPropagation();
     e.preventDefault();
-    console.log("opening settings")
     this.showSettings = true;
     this.deleteActive = false;
+    this.brokerNames = ['-unset-', ...this.world.getBrokerNames()];
     this.refresh();
   }
 
   connectToBroker() {
-    this.messaging = this.world.createConnection(this.connectOpts);
+    if (this.brokerName) {
+      this.messaging = this.world.createConnection(this.brokerName, this.connectOpts);
+      if (!this.messaging) {
+        alert(`Can't create connection to ${this.brokerName}`);
+      }
+    }
+    else {
+      alert(`Need to configure broker name for portal ${this.name}`);
+    }
   }
 
   disconnectFromBroker() {
-    this.messaging.dispose();
-    this.messaging = null;
+    if (this.messaging) {
+      this.messaging.dispose();
+      this.messaging = null;
+    }
   }
 
   addSubscription(e) {
@@ -472,7 +509,7 @@ export class Portal extends Entity {
     // Remove the default subscription if it is there
     let sub = this.getStandardSubscription();
     if (this.color != 'black') {
-      if (!this.subIds[sub]) {
+      if (!this.subIds.hasOwnProperty(sub)) {
         return;
       }
       this.removeMessagingSubscription(sub);
@@ -585,14 +622,11 @@ export class Portal extends Entity {
 
       this.world.save();
       this.refresh();
-  
     }
-
   }
 
   changeName(name) {
     // if the name changes, we will simply make a new connection 
-    console.log("Changing name to:", name)
     if (name != undefined && name != "" && name != null && name != this.name) {
       this.name = name;
       this.clientId = `${name}_${(Math.random()*1000000).toFixed(0)}`;
@@ -606,24 +640,58 @@ export class Portal extends Entity {
     }
   }
 
+  changeBrokerName(brokerName) {
+    if (!brokerName || brokerName == '-unset-') {
+      this.disconnectFromBroker();
+    }
+    else if (brokerName != this.brokerName) {
+      this.reconnectToBroker();
+    }
+    this.world.save();
+    this.refresh();
+  }
+
+  setBrokerName(name) {
+    this.brokerName = name;
+  }
+
+  reconnectToBroker() {
+    console.log("reconnecting")
+    this.disconnectFromBroker();
+    this.connectToBroker();
+    this.readdAllMessagingSubscriptions();
+    this.world.save();
+    this.refresh();
+  }
+
   removeMessagingSubscription(sub) {
     if (!sub) {
       sub = this.getStandardSubscription();
     }
     let subId = this.subIds[sub];
-    if (subId) {
-      delete(this.subIds[sub]);
+    if (subId && this.messaging) {
       this.messaging.unsubscribe(subId);
     }
+    delete(this.subIds[sub]);
   }
 
   addMessagingSubscription(sub) {
-    let subId = this.messaging.subscribe(1, sub, (topic, msg, data) => this.rxMessage(topic, msg, data));
-    this.subIds[sub] = subId;
+    if (this.messaging) {
+      let subId = this.messaging.subscribe(1, sub, (topic, msg, data) => this.rxMessage(topic, msg, data));
+      this.subIds[sub] = subId;
+    }
+    else {
+      this.subIds[sub] = undefined;
+    }
   }
 
   readdAllMessagingSubscriptions() {
-    Object.keys(this.subIds).forEach(sub => {
+    if (!this.messaging) {
+      return;
+    }
+    let subs = Object.keys(this.subIds);
+    this.subIds = [];
+    subs.forEach(sub => {
       let subId = this.messaging.subscribe(1, sub, (topic, msg, data) => this.rxMessage(topic, msg, data));
       this.subIds[sub] = subId;
     });
@@ -773,17 +841,21 @@ export class Portal extends Entity {
     if (this.showControls && this.portalIdInput && this.portalIdInput.el) {
       let id   = this.portalIdInput.el.value;
       let name = this.portalNameInput.el.value;
-      console.log("changing id");
+      let brokerName = this.brokerNameSelect.el.value;
       this.changeId(id);
-      console.log("changing name");
-      this.changeName(name);
+
+      if (brokerName && !this.brokerName || this.brokerName != brokerName) {
+        this.name = name;
+        this.changeBrokerName(brokerName);
+      }
+      else {
+        this.changeName(name);
+      }
     }
 
-    console.log("changing bools");
     this.showControls = false;
     this.showSettings = false;
     this.deleteActive = true;
-    console.log("showsettings:", this.showSettings);
     this.refresh();
   }
 
@@ -795,6 +867,7 @@ export class Portal extends Entity {
       rotation: this.rotationRad,
       color: this.color,
       id: this.id,
+      brokerName: this.brokerName,
       subscriptions: Object.keys(this.subIds),
       name: this.name,
       clientId: this.clientId

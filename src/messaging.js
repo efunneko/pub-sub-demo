@@ -29,6 +29,7 @@ export class Messaging {
       clean: false
     }
 
+    console.log("Connecting to:", this.host, opts)
     this.client  = mqtt.connect(this.host, opts)
  
     this.client.on('connect', () => {

@@ -3,6 +3,7 @@
 import {jst}                   from "jayesstee";
 import {Entity}                from "./entity.js";
 import {Images}                from "./images.js";
+import { utils } from "./utils.js";
 
 const BROKER_SIZE = 100;
 
@@ -10,6 +11,9 @@ export class Broker extends Entity {
   constructor(world, scale, offsetX, offsetY, opts) {
     super(world, scale, offsetX, offsetY);
 
+    this.type = 'broker';
+
+    console.log("new broker:", opts)
     this.x = opts.x || 50;
     this.y = opts.y || 50;
 
@@ -19,7 +23,12 @@ export class Broker extends Entity {
       hostname: 'vmr-134-44'
     };
 
-    this.type = 'mqtt';
+    this.name = opts.name;
+    this.url  = opts.url;
+    this.username = opts.username;
+    this.password = opts.password;
+
+    this.protocol = 'mqtt';
 
     this.baseSize = BROKER_SIZE;
 
@@ -73,7 +82,50 @@ export class Broker extends Entity {
         padding$px: this.ss(0.04),
         borderRadius$px: this.ss(0.04),
         boxShadow$px: [0, 0, this.ss(0.04), jst.rgba(0,0,0,0.6), 'inset']
-      }
+      },
+      gripKnob$c: {
+        position: 'absolute',
+        top: '45%',
+        right: '42%',
+        cursor: 'move'
+      },
+      cog$c: {
+        position: 'absolute',
+        top: '-9%',
+        right: '-9%',
+        padding: '2%',
+        backgroundColor: 'white',
+        color: '#888',
+        borderRadius: '20%',
+        border$px: [1, 'solid', 'black']
+
+      },
+      settingPanel$c: {
+        position: 'absolute',
+        top: '5%',
+        left: '%5',
+        fontSize$px: this.ss(0.1),
+        padding$px: this.ss(0.05),
+        borderRadius$px: '5%',
+        backgroundColor: 'white',
+        color: '#222',
+        border$px: [1, 'solid', 'black'],
+        boxShadow$px: [0, this.ss(0.05), this.ss(0.1), jst.rgba(0,0,0,0.3)],
+        zIndex: 5
+      },
+      settingsTitle$c: {
+        margin$px: [1 * this.scale, 1 * this.scale, 1.5 * this.scale, 1 * this.scale],
+        fontWeight: 'bold',
+        textAlign: 'center'
+      },
+      inputLabel$c: {
+        fontWeight: 'bold'
+      },
+      textInput$c: {
+        marginTop$px: this.ss(0.05),
+        marginLeft$px: this.ss(0.03),
+      },
+
     }, super.cssLocal());
   }
 
@@ -95,14 +147,48 @@ export class Broker extends Entity {
   }
 
   render() {
-    return jst.$div({class: '-body --body'},
+    console.log("Got name:", this.name)
+    return jst.$div({class: '-body --body', events: {click: e => this.select(e)}},
       jst.$div({cn: '-title'}, "Event Broker"),
-      this.type == 'mqtt' ? this.renderMqttLogo() : this.renderSolaceLogo(),
-      jst.$div({cn: '-host'}, this.connectOpts.hostname),
+      this.protocol == 'mqtt' ? this.renderMqttLogo() : this.renderSolaceLogo(),
+      jst.$div({cn: '-host'}, this.name),
       jst.if(this.showControls) &&
         jst.$div({cn: '-controls --controls'},
-          jst.$div({cn: '--gripKnob -knob', events: {pointerdown: e => this.gripDown(e)}})
+          jst.$div({cn: '-cog',
+                    events: {
+                      click: e => this.openSettings(e),
+                      pointerDown: utils.stopEvent
+                  }}, 
+            jst.$i({cn: 'fas fa-cog', events: {
+              click: e => console.log("clicked"),
+              pointerdown: utils.stopEvent
+            }})
+          ),
+          jst.$div({cn: '-gripKnob -knob', events: {pointerdown: e => this.gripDown(e)}})
+        ),
+      jst.if(this.showSettings) &&
+        jst.$div({cn: '-settingPanel --settingPanel', events: {click: utils.noProp, pointerdown: utils.noProp}},
+          jst.$div({cn: '-settingsTop'},
+            jst.$div({cn: '-settingsTitle'}, "Broker Configuration"),
+            jst.$div({cn: '-textInput'},
+              jst.$div({cn: '-inputLabel'}, "Broker Name"),
+              jst.$div({cn: '-inputDiv'}, jst.$input({cn: '-input -nameInput', value: this.name, ref: 'nameInput'})),
+            ),
+            jst.$div({cn: '-textInput'},
+              jst.$div({cn: '-inputLabel'}, "Connect URL"),
+              jst.$div({cn: '-inputDiv'}, jst.$input({cn: '-input -urlInput', value: this.url, ref: 'urlInput'})),
+            ),
+            jst.$div({cn: '-textInput'},
+              jst.$div({cn: '-inputLabel'}, "Username"),
+              jst.$div({cn: '-inputDiv'}, jst.$input({cn: '-input -usernameInput', value: this.username, ref: 'usernameInput'})),
+            ),
+            jst.$div({cn: '-textInput'},
+              jst.$div({cn: '-inputLabel'}, "Password"),
+              jst.$div({cn: '-inputDiv'}, jst.$input({cn: '-input -passwordInput', type: 'password', value: this.password, ref: 'passwordInput'})),
+            ),
+          ),
         )
+
     );
   }
 
@@ -125,14 +211,98 @@ export class Broker extends Entity {
     */
   }
 
+  getConnectionOpts() {
+    return {
+      host: this.url,
+      username: this.username,
+      password: this.password
+    }
+  }
+
+  changeConfig(name, url, username, password) {
+    let oldName   = this.name;
+    this.name     = name;
+    this.url      = url;
+    this.username = username;
+    this.password = password;
+    this.world.handleBrokerConfigChange(oldName, this);
+    this.world.save();
+    this.refresh();
+  }
+
+  gripDown(e) {
+    e.preventDefault();
+    e.stopPropagation();
+    this.controlMove = e => this.gripMove(e);
+    this.controlUp   = e => this.gripUp(e);
+    this.clickStart = {
+      ex: e.clientX,
+      ey: e.clientY,
+      x: this.x,
+      y: this.y,
+    };
+  }
+
+  gripMove(e) {
+    let dx = (e.clientX - this.clickStart.ex)/this.scale;
+    let dy = (e.clientY - this.clickStart.ey)/this.scale;
+    this.moveTo(this.clickStart.x + dx, this.clickStart.y + dy, false);
+  }
+
+  gripUp(e) {
+    this.controlUp   = null;
+    this.controlMove = null;
+    let dx = (e.clientX - this.clickStart.ex)/this.scale;
+    let dy = (e.clientY - this.clickStart.ey)/this.scale;
+    this.moveTo(this.clickStart.x + dx, this.clickStart.y + dy, true);
+  }
+
+  select(e) {
+    console.log("broker selected")
+    e.preventDefault();
+    e.stopPropagation();
+    this.world.entitySelected(this);
+    this.showControls = true;
+    this.refresh();
+  }
+
+  unselect() {
+    console.log("unselect", this.nameInput)
+    if (this.showControls && this.nameInput && this.nameInput.el) {
+      let name     = this.nameInput.el.value;
+      let url      = this.urlInput.el.value;
+      let username = this.usernameInput.el.value;
+      let password = this.passwordInput.el.value;
+      this.changeConfig(name, url, username, password);
+    }
+
+    this.showControls = false;
+    this.showSettings = false;
+    this.deleteActive = true;
+    this.refresh();
+  }
+
+  openSettings(e) {
+    e.stopPropagation();
+    e.preventDefault();
+    this.showSettings = true;
+    this.deleteActive = false;
+    this.refresh();
+  }
+
   serialize() {
     return {
       type: 'broker',
       x: this.x,
       y: this.y,
+      name: this.name,
+      url: this.url,
+      username: this.username,
+      password: this.password,
       width: this.width,
       height: this.height,
     };
   }
 
+ 
 }
