@@ -645,6 +645,7 @@ export class Portal extends Entity {
       this.disconnectFromBroker();
     }
     else if (brokerName != this.brokerName) {
+      this.brokerName = brokerName;
       this.reconnectToBroker();
     }
     this.world.save();

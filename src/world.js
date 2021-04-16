@@ -34,18 +34,6 @@ export class World extends jst.Component {
     if (state) {
       this.messagingOpts = state.messagingOpts;      
     }
-    else {
-      this.messagingOpts = {
-        host: 'ws://192.168.134.44:8000',
-        username: 'default',
-        password: 'default'
-      };
-    }
-    this.messagingOpts = {
-      host: 'ws://192.168.134.37:8000',
-      username: 'default',
-      password: 'default'
-    };
 
     this.toolBar = new ToolBar(this, this.scale);
     this.matter  = new Matter(this, {events: {tick: () => this.animationTick()}});
