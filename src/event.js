@@ -36,10 +36,14 @@ export class Event extends jst.Component {
     this.guid         = opts.guid;
     this.cornerRadius = opts.cornerRadius;
     this.topic        = opts.topic;
+    this.traceId      = opts.traceId;
+    this.parentId     = opts.parentId;
 
     this.isEvent      = true;
-    this.type         = "square";      
-
+    this.type         = "square";     
+    
+    this.createTime   = opts.emitted ? 0 : Date.now();
+    
     this.resize(scale, offsetX, offsetY);
 
     this.addMatterBlocks();
@@ -132,7 +136,7 @@ export class Event extends jst.Component {
     }
 
     this.lastTopic = topicPrefix + `${this.type}/${this.color}/${this.id.toString().padStart(5, "0")}/${Math.ceil(this.body.area).toString().padStart(6, "0")}`;
-    messaging.publish(this.lastTopic, msg, {qos: 1});
+    messaging.publish(this.lastTopic, msg, {qos: 1, color: this.color, traceId: this.traceId, parentId: this.parentId});
 
     // Remove ourselves
     this.world.removeEvent(this);

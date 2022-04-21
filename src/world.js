@@ -7,7 +7,8 @@ import {FixedBody}             from "./fixed-body.js";
 import {Emitter}               from "./emitter.js";
 import {Event}                 from './event';
 import {Broker}                from "./broker";
-import {Messaging}             from './messaging';
+import {MqttMessaging}         from './mqtt-messaging';
+import {SolaceMessaging}       from './solace-messaging';
 import {ToolBar}               from './tool-bar';
 
 const MOUSE_WHEEL_SCALE_FACTOR = 1.05;
@@ -136,7 +137,7 @@ export class World extends jst.Component {
 
       if (broker) {
         let combinedOpts = Object.assign(broker.getConnectionOpts(), opts);
-        let messaging    = new Messaging(combinedOpts);
+        let messaging = combinedOpts.protocol == 'mqtt' ? new MqttMessaging(combinedOpts) : new SolaceMessaging(combinedOpts);
         messaging.connect();
         return messaging;
       }

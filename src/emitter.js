@@ -340,6 +340,7 @@ export class Emitter extends Entity {
       eventId: this.eventSeq,
       velocity: {x: v[0], y: v[1]},
       color: color,
+      emitted: true,
       guid: (100000000*Math.random()).toFixed(0) + '-' + (100000000*Math.random()).toFixed(0)
     };
     let size = this.eventWidth*1.5 + this.eventWidth * this.size/4;

@@ -8,6 +8,7 @@ const PORTAL_WIDTH          = 120;
 const PORTAL_SQUISH         = 3;
 const PORTAL_SQUISH2        = PORTAL_SQUISH * 2;
 const PORTAL_SQUISH_INNER   = PORTAL_SQUISH + 0.1;
+const PORTAL_COOLDOWN_MS    = 250;
 
 const MAX_VELOCITY          = 15;
 const MIN_EVENT_GAP         = 50;
@@ -411,7 +412,7 @@ export class Portal extends Entity {
     let sub = this.getStandardSubscription();
 
     if (this.messaging) {
-      let subId = this.messaging.subscribe(1, sub, (topic, msg, data) => this.rxMessage(topic, msg, data));
+      let subId = this.messaging.subscribe(0, sub, (topic, msg, data) => this.rxMessage(topic, msg, data));
       this.subIds[sub] = subId;
     }
     else {
@@ -529,6 +530,20 @@ export class Portal extends Entity {
 
   rxMessage(topic, msg, data) {
     data.topic = topic;
+
+    // Check for user-properties in the message and remember the trace and parent Ids if we have them
+    const props = this.messaging.getUserProperties(msg);
+    console.log("getting props", props);
+    if (props) {
+      if (props.traceparent) {
+        let match = props.traceparent.match(/^00-([0-9a-fA-F]{32})-([0-9a-fA-F]{16})-/);
+        if (match) {
+          data.traceId = match[1];
+          data.parentId = match[2];
+        }
+      }
+    }
+
     if (this.queuedEvents.length) {
       this.queuedEvents.push(data);
       return;
@@ -565,7 +580,9 @@ export class Portal extends Entity {
       velocity: {x: v[0], y: v[1]},
       color: data.color,
       guid: data.guid,
-      topic: data.topic
+      topic: data.topic,
+      traceId: data.traceId,
+      parentId: data.parentId,
     };
     let size = data.width;
     this.world.addEvent(...this.rotateCoords(this.x + PORTAL_WIDTH*0.1, this.y+PORTAL_WIDTH*0.5), size, size, opts);
@@ -678,7 +695,7 @@ export class Portal extends Entity {
 
   addMessagingSubscription(sub) {
     if (this.messaging) {
-      let subId = this.messaging.subscribe(1, sub, (topic, msg, data) => this.rxMessage(topic, msg, data));
+      let subId = this.messaging.subscribe(0, sub, (topic, msg, data) => this.rxMessage(topic, msg, data));
       this.subIds[sub] = subId;
     }
     else {
@@ -693,7 +710,7 @@ export class Portal extends Entity {
     let subs = Object.keys(this.subIds);
     this.subIds = [];
     subs.forEach(sub => {
-      let subId = this.messaging.subscribe(1, sub, (topic, msg, data) => this.rxMessage(topic, msg, data));
+      let subId = this.messaging.subscribe(0, sub, (topic, msg, data) => this.rxMessage(topic, msg, data));
       this.subIds[sub] = subId;
     });
   }
@@ -754,6 +771,14 @@ export class Portal extends Entity {
   }
 
   enterPortal(selfBody, otherBody, otherBodyObj) {
+
+    let now = Date.now();
+    let delta = now - otherBodyObj.createTime;
+    
+    if (delta < PORTAL_COOLDOWN_MS) {
+      return;
+    }
+
     // Portion of the topic specific to the portal
     let topicPrefix = `event/portal/${this.color}/${this.id}/`;
     if (otherBodyObj.isEvent) {

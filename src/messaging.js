@@ -18,36 +18,15 @@ export class Messaging {
     this.subRefCounts        = {};
     this.subIdToSubscription = {};
     this.subSeq              = 1;
-
+    console.log("Messaging", opts)
   }
 
   connect() {
-    let opts = {
-      username: this.username,
-      password: this.password,
-      clientId: this.clientId,
-      clean: false
-    }
-
-    console.log("Connecting to:", this.host, opts)
-    this.client  = mqtt.connect(this.host, opts)
- 
-    this.client.on('connect', () => {
-      console.log("Connected!!", this.subscriptions)
-      if (this.subscriptions.length) {
-        this.subscriptions.forEach(sub => {
-          console.log("subscribing:", sub)
-          this.client.subscribe(sub.sub, {qos: sub.qos});
-        });
-      }
-    })
-     
-    this.client.on('message', (topic, msg) => this.rxMessage(topic, msg));
+    // all handled in the sub-class
   }
 
   disconnect() {
     console.log("Disconnect")
-    this.client.end();
   }
 
   dispose() {
@@ -61,16 +40,17 @@ export class Messaging {
     if (callback) {
       this.learnSubscription(subscription, callback, subId);
     }
-    if (this.client) {      
-      this.client.subscribe(subscription, {qos: qos});
-    }
 
-    this.subRefCounts[subId] = this.subRefCounts[subId] ? this.subRefCounts[subId]++ : 1;
-    this.subIdToSubscription[subId]   = [qos, subscription];
+    this.subRefCounts[subId]        = this.subRefCounts[subId] ? this.subRefCounts[subId]++ : 1;
+    this.subIdToSubscription[subId] = [qos, subscription];
 
     console.log("added sub", subscription)
 
     return subId;
+  }
+
+  getSubscription(subId) {
+    return this.subIdToSubscription[subId];
   }
 
   unsubscribe(subId) {
@@ -79,7 +59,7 @@ export class Messaging {
     if (!this.subRefCounts[subId]) {
       delete(this.subRefCounts[subId]);
       if (this.subIdToSubscription[subId]) {
-        this.client.unsubscribe(this.subIdToSubscription[subId][1]);
+        this._unsubscribe(this.subIdToSubscription[subId][1]);
         delete(this.subIdToSubscription[subId]);
       }
       else {
@@ -89,10 +69,10 @@ export class Messaging {
   }
 
   publish(topic, msg, opts) {
-    this.client.publish(topic, JSON.stringify(msg), opts);
   }
 
   rxMessage(topic, msg) {
+    console.log("rxMessage", topic, msg)
     let data;
     try {
       data = JSON.parse(msg.toString());
@@ -108,6 +88,9 @@ export class Messaging {
 
   }
 
+  getUserProperties() {
+  }
+
   getMessageCallbacks(topic) {
     let cbs = [];
     this.subPrefixes.forEach(item => {
@@ -121,17 +104,27 @@ export class Messaging {
       }
     })
     if (this.subWildcards.length) {
-      let topicParts = topic.split("/");
+      let topicParts = topic.split(this.topicSeparator);
       this.subWildcards.forEach(item => {
         let subParts = item.subParts;
         let match = true;
         for (let i = 0; i < subParts.length; i++) {
-          if (subParts[i] === "#") {
+          if (subParts[i] === this.topicAllLevelsWildcard) {
             break;
           }
-          if (topicParts[i] !== subParts[i] && subParts[i] !== "+") {
-            match = false;
-            break;
+          if (topicParts[i] !== subParts[i]) {
+            if (subParts[i] !== this.topicLevelWildcard) {
+              // if subParts[i] ends with a wildcard, then find if all the characters before the wildcard match
+              // if not, then we don't match
+              if (subParts[i].endsWith(this.topicLevelWildcard)) {
+                let subPart = subParts[i].substring(0, subParts[i].length - 1);
+                if (topicParts[i].startsWith(subPart)) {
+                  continue;
+                }
+              }
+              match = false;
+              break;
+            }
           }
         }
         if (match) {
@@ -143,16 +136,21 @@ export class Messaging {
   }
 
   learnSubscription(subscription, callback, subId) {
-    if (subscription.match(/\+/)) {
+    console.log("check", this.topicAllLevelsWildcard, this.topicLevelWildcard, this.topicSeparator);
+    //if (subscription.match(/\+/)) {
+    if (subscription.match(new RegExp("\\" + this.topicLevelWildcard))) {
       this.subWildcards.push({
-        subParts: subscription.split("/"),
+        //subParts: subscription.split("/"),
+        subParts: subscription.split(this.topicSeparator),
         callback: callback,
         id: subId
       })
     }
-    else if (subscription.endsWith("/#")) {
+    //else if (subscription.endsWith("/#")) {
+    else if (subscription.endsWith("/" + this.topicAllLevelsWildcard)) {
       this.subPrefixes.push({
-        prefix: subscription.replace(/\/#$/, ""),
+        //prefix: subscription.replace(/\/#$/, ""),
+        prefix: subscription.replace(new RegExp("/" + this.topicAllLevelsWildcard + "$"), ""),
         callback: callback,
         id: subId
       })

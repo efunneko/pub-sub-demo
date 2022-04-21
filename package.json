@@ -8,7 +8,7 @@
     "matter-js": "^0.15.0",
     "mqtt": "^4.2.6",
     "poly-decomp": "^0.3.0",
-    "solclientjs": "^10.5.1"
+    "solclientjs": "^10.10.0"
   },
   "devDependencies": {
     "@babel/cli": "^7.6.2",

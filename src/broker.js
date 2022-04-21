@@ -28,7 +28,7 @@ export class Broker extends Entity {
     this.username = opts.username;
     this.password = opts.password;
 
-    this.protocol = 'mqtt';
+    this.protocol = 'smf';
 
     this.baseSize = BROKER_SIZE;
 
@@ -213,7 +213,8 @@ export class Broker extends Entity {
 
   getConnectionOpts() {
     return {
-      host: this.url,
+      protocol: this.protocol,
+      host:     this.url,
       username: this.username,
       password: this.password
     }
