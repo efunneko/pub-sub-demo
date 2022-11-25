@@ -438,6 +438,7 @@ export class Portal extends Entity {
       }
     }
     else {
+      console.warn("here")
       alert(`Need to configure broker name for portal ${this.name}`);
     }
   }

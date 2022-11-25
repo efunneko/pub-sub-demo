@@ -6,6 +6,17 @@ import {Images}                from "./images.js";
 import { utils } from "./utils.js";
 
 const BROKER_SIZE = 100;
+const SUPPORTED_PROTO = [
+  {
+    name: "Solace",
+    proto: "smf"
+  },
+  {
+    name: "MQTT",
+    proto: "mqtt"
+  },
+  
+];
 
 export class Broker extends Entity {
   constructor(world, scale, offsetX, offsetY, opts) {
@@ -13,7 +24,6 @@ export class Broker extends Entity {
 
     this.type = 'broker';
 
-    console.log("new broker:", opts)
     this.x = opts.x || 50;
     this.y = opts.y || 50;
 
@@ -28,7 +38,7 @@ export class Broker extends Entity {
     this.username = opts.username;
     this.password = opts.password;
 
-    this.protocol = 'smf';
+    this.protocol = opts.protocol || 'smf';
 
     this.baseSize = BROKER_SIZE;
 
@@ -125,6 +135,10 @@ export class Broker extends Entity {
         marginTop$px: this.ss(0.05),
         marginLeft$px: this.ss(0.03),
       },
+      selectInput$c: {
+        marginTop$px: this.ss(0.05),
+        marginLeft$px: this.ss(0.03),
+      },
 
     }, super.cssLocal());
   }
@@ -147,7 +161,6 @@ export class Broker extends Entity {
   }
 
   render() {
-    console.log("Got name:", this.name)
     return jst.$div({class: '-body --body', events: {click: e => this.select(e)}},
       jst.$div({cn: '-title'}, "Event Broker"),
       this.protocol == 'mqtt' ? this.renderMqttLogo() : this.renderSolaceLogo(),
@@ -173,6 +186,17 @@ export class Broker extends Entity {
             jst.$div({cn: '-textInput'},
               jst.$div({cn: '-inputLabel'}, "Broker Name"),
               jst.$div({cn: '-inputDiv'}, jst.$input({cn: '-input -nameInput', value: this.name, ref: 'nameInput'})),
+            ),
+            jst.$div({cn: '-selectInput'},
+              jst.$div({cn: '-inputLabel'}, "Protocol"),
+              jst.$div({cn: '-inputDiv'}, 
+                jst.$select({cn: '', ref: 'protoInput'},
+                  SUPPORTED_PROTO.map(p => jst.$option(
+                    Object.assign({value: p.proto}, this.protocol==p.proto ? {selected: true} : {}),
+                    p.name
+                  ))              
+                )
+              )
             ),
             jst.$div({cn: '-textInput'},
               jst.$div({cn: '-inputLabel'}, "Connect URL"),
@@ -220,9 +244,10 @@ export class Broker extends Entity {
     }
   }
 
-  changeConfig(name, url, username, password) {
+  changeConfig(name, proto, url, username, password) {
     let oldName   = this.name;
     this.name     = name;
+    this.protocol = proto;
     this.url      = url;
     this.username = username;
     this.password = password;
@@ -268,13 +293,13 @@ export class Broker extends Entity {
   }
 
   unselect() {
-    console.log("unselect", this.nameInput)
     if (this.showControls && this.nameInput && this.nameInput.el) {
       let name     = this.nameInput.el.value;
+      let proto    = this.protoInput.el.value;
       let url      = this.urlInput.el.value;
       let username = this.usernameInput.el.value;
       let password = this.passwordInput.el.value;
-      this.changeConfig(name, url, username, password);
+      this.changeConfig(name, proto, url, username, password);
     }
 
     this.showControls = false;
@@ -298,6 +323,7 @@ export class Broker extends Entity {
       y: this.y,
       name: this.name,
       url: this.url,
+      protocol: this.protocol,
       username: this.username,
       password: this.password,
       width: this.width,

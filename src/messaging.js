@@ -88,7 +88,7 @@ export class Messaging {
 
   }
 
-  getUserProperties() {
+  getUserProperties(msg) {
   }
 
   getMessageCallbacks(topic) {

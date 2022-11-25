@@ -1,6 +1,7 @@
 const path              = require('path');
 const HtmlWebpackPlugin = require('html-webpack-plugin');
 const webpack           = require('webpack');
+const NodePolyfillPlugin = require("node-polyfill-webpack-plugin")
 
 module.exports = {
   entry: './src/index.js',
@@ -18,11 +19,12 @@ module.exports = {
       template: './src/index.html',
       title: 'PubSubDemo'
     }),
+    new NodePolyfillPlugin(),
     new webpack.ProvidePlugin({ 'window.decomp': 'poly-decomp' })
   ],
   devServer: {
     // Display only errors to reduce the amount of output.
-    stats: "errors-only",
+    //stats: "errors-only",
 
     // Parse host and port from env to allow customization.
     //
@@ -32,10 +34,10 @@ module.exports = {
     // 0.0.0.0 is available to all network devices
     // unlike default `localhost`.
     host: '0.0.0.0',
-    disableHostCheck: true,
+    //disableHostCheck: true,
     port: process.env.PORT, // Defaults to 8080
     open: false, // Open the page in browser
-    overlay: true,
+    //overlay: true,
     historyApiFallback: true
   },
   devtool: 'inline-source-map',
@@ -43,8 +45,11 @@ module.exports = {
     rules: [
       {
         test: /\.(png|svg|jpg|gif)$/,
-        loader: "file-loader?name=/assets/[name].[ext]"
-      },
+        loader: "file-loader",
+        options: {
+          name: '/assets/[name].[ext]',
+        }
+    },
       {
         test: /.(ttf|otf|eot|svg|woff(2)?)(\?[a-z0-9]+)?$/,
         use: [{
